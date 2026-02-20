@@ -7,7 +7,6 @@ Reusable server setup repository for provisioning a fresh Linux EC2 instance wit
 ```text
 aws-ec2/
 ├── install/
-│   ├── history.txt
 │   └── install-tools.sh
 ├── dotfiles/
 │   ├── .bashrc
