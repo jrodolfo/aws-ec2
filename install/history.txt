@@ -1,0 +1,668 @@
+    1  pwd
+    2  logout
+    3  sudo yum update -y
+    4  sudo yum install docker -y
+    5  [200~sudo service docker start
+    6  sudo service docker start
+    7  sudo systemctl enable docker
+    8  sudo usermod -a -G docker ec2-user
+    9  logout
+   10  sudo yum install docker-compose-plugin -y
+   11  sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+   12  sudo chmod +x /usr/local/bin/docker-compose
+   13  ls -la
+   14  echo 'alias "docker compose"="docker-compose"' >> ~/.bashrc
+   15  source ~/.bashrc
+   16  vi .bashrc
+   17  source ~/.bashrc
+   18  mkdir -p ~/.docker/cli-plugins
+   19  ln -s /usr/local/bin/docker-compose ~/.docker/cli-plugins/docker
+   20  docker compose version
+   21  # 1. Remove the incorrectly named link
+   22  rm ~/.docker/cli-plugins/docker
+   23  # 2. Create the correctly named link (the name must be 'docker-compose')
+   24  ln -s /usr/local/bin/docker-compose ~/.docker/cli-plugins/docker-compose
+   25  docker compose version
+   26  docker pull jrodolfo/job-portal-backend:latest
+   27  docker pull jrodolfo/job-portal-frontend:latest
+   28  mkdir job-portal && cd job-portal
+   29  vi .env
+   30  vi docker-compose.yml
+   31  ll
+   32  ls -la
+   33  docker compose up -d
+   34  docker images
+   35  docker ps
+   36  docker logs -f job-portal-backend
+   37  history
+   38  docker logs -f job-portal-backend
+   39  date
+   40  logout
+   41  docker ps
+   42  docker compose down
+   43  cd job-portal/
+   44  ls -la
+   45  docker compose down
+   46  docker ps
+   47  docker inspect mysql-db
+   48  ls -la
+   49  cd job-portal/
+   50  ls -la
+   51  docker compose pull backend
+   52  docker compose up -d backend
+   53  vi start.sh
+   54  vi stop.sh
+   55  chmod a+x st*.sh
+   56  ls -la
+   57  ./stop.sh 
+   58  ./start.sh
+   59  ./stop.sh 
+   60  ls -la
+   61  vi .env
+   62  ifconfig
+   63  vi .env
+   64  ./stop.sh 
+   65  ./start.sh
+   66  TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+   67  curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4
+   68  curl checkip.amazonaws.com
+   69  ls -la
+   70  cd ..
+   71  cp job-portal/stop.sh show-ip.sh
+   72  vi show-ip.sh 
+   73  ls -la
+   74  chmod a+x show-ip.sh 
+   75  ./show-ip.sh 
+   76  cat .bashrc
+   77  vi .bashrc
+   78  source .bashrc
+   79  ll
+   80  la
+   81  ./show-ip.sh 
+   82  TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+   83  curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-hostname
+   84  ll
+   85  cd job-portal/
+   86  ll
+   87  la
+   88  vi .env
+   89  ll
+   90  ./stop.sh 
+   91  ./start.sh 
+   92  vi .env
+   93  who
+   94  ll
+   95  ./stop.sh 
+   96  logout
+   97  curl -i http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/jobs
+   98  curl -i -u user:user123 -X POST http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/auth/logi
+   99  curl -i -u admin:admin123 -H "Content-Type: application/json" -d '{"title":"OTel Check","description":"trace check","company":"EC2"}'
+  100    http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/jobs
+  101  curl -i -u admin:admin123 -H "Content-Type: application/json" -d '{"title":"OTel Check","description":"trace check","company":"EC2"}'
+  102    http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/jobs
+  103  curl -i -u admin:admin123 -H "Content-Type: application/json" -d '{"title":"OTel Check","description":"trace check","company":"EC2"}' http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/jobs
+  104  ll
+  105  cd job-portal/
+  106  ll
+  107  la
+  108  vi .env
+  109  vi start.sh 
+  110  vi stop.sh 
+  111  ./start.sh 
+  112  vi start.sh 
+  113  vi stop.sh 
+  114  ./start.sh 
+  115  ll
+  116  vi docker-compose.prod.yml
+  117  ./start.sh 
+  118  ll
+  119  vi docker-compose.yml 
+  120  ll
+  121  touch doc/otel/collector-prod.yaml
+  122  mkdir doc
+  123  mkdir doc/otel
+  124  cd doc/otel
+  125  touch collector-prod.yaml
+  126  vi collector-prod.yaml 
+  127  cd ..
+  128  ll
+  129  mkdir job-portal-backend
+  130  cd job-portal-backend/
+  131  touch Dockerfile
+  132  vi Dockerfile 
+  133  cat Dockerfile 
+  134  cd ..
+  135  ll
+  136  la
+  137  cd job-portal/
+  138  la
+  139  docker compose -f docker-compose.yml -f docker-compose.prod.yml config > /tmp/compose.out
+  140  ./start.sh 
+  141  la
+  142  vi docker-compose.prod.yml 
+  143  la
+  144  ./stop.sh 
+  145  ./start.sh 
+  146  ./stop.sh
+  147  ./start.sh 
+  148  docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+  149  docker logs --tail=200 otel-collector
+  150  docker exec -it otel-collector /bin/sh -c 'echo "$OTEL_UPSTREAM_OTLP_ENDPOINT" && [ -n "$OTEL_UPSTREAM_API_KEY" ] && echo "API key set"
+  151    || echo "API key missing"'
+  152  cls
+  153    docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' otel-collector | grep -E '^OTEL_UPSTREAM_OTLP_ENDPOINT=|^OTEL_UPSTREAM_API_KEY='
+  154    docker logs otel-collector 2>&1 | grep -Ei 'otlphttp|upstream|error|401|403|timeout|refused|dns|failed'
+  155    curl -i https://otlp.nr-data.net/v1/traces     -H "api-key: $OTEL_UPSTREAM_API_KEY"     -H "Content-Type: application/json"     -d '{}'
+  156  curl -i http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/jobs
+  157  curl -i -u user:user123 -X POST http://ec2-3-139-118-215.us-east-2.compute.amazonaws.com:8080/api/auth/login
+  158  docker logs --since=5m otel-collector 2>&1 | grep -Ei 'otlphttp|upstream|error|401|403|timeout|refused|failed|retry'
+  159  la
+  160  ./stop.sh 
+  161  ./start.sh 
+  162  ll
+  163  cd job-portal/
+  164  ll
+  165  ./stop.sh 
+  166  ll
+  167  cd job-portal/
+  168  ll
+  169  ./start.sh 
+  170  ./stop.sh 
+  171  ./start.sh 
+  172  ll
+  173  ./show-ip.sh 
+  174  cd job-portal/
+  175  ll
+  176  ./stop.sh 
+  177  ./start.sh 
+  178  ./stop.sh 
+  179  ./start.sh 
+  180  ./stop.sh 
+  181  ./start.sh 
+  182  ./stop.sh 
+  183  ./start.sh 
+  184  ./stop.sh 
+  185  ./start.sh 
+  186  ./stop.sh 
+  187  ./start.sh 
+  188  ./stop.sh 
+  189  exit
+  190  ssh -V
+  191  sudo sshd -V
+  192  sudo dnf update -y
+  193  sudo reboot
+  194  sudo vi /etc/ssh/sshd_config
+  195  sudo systemctl restart sshd
+  196  systemctl status sshd.service
+  197  journalctl -xeu sshd.service
+  198  systemctl status sshd.service
+  199  sudo systemctl restart sshd
+  200  sudo vi /etc/ssh/sshd_config
+  201  sudo sshd -t
+  202  sudo systemctl restart sshd
+  203  exit
+  204  logout
+  205  exit
+  206  sudo sshd -T | grep kex
+  207  sudo sshd -T | grep kex | sntrup761x25519
+  208  sudo sshd -T | grep kex | grep sntrup761x25519
+  209  sudo update-crypto-policies --show
+  210  sudo update-crypto-policies --set DEFAULT:FUTURE
+  211  logout
+  212  curl -s http://169.254.169.254/latest/meta-data/instance-type
+  213  ping -c 2 169.254.169.254
+  214  TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+  215  curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-type
+  216  vi ec2-info.sh
+  217  chmod a+x ec2-info.sh 
+  218  ./ec2-info.sh 
+  219  mkdir -p ~/bin
+  220  mv ~/ec2-info.sh ~/bin/ec2info
+  221  cd bin/
+  222  la
+  223  echo $PATH
+  224  la
+  225  cd ..
+  226  la
+  227  echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+  228  source ~/.bashrc
+  229  ec2info
+  230  mv show-ip.sh bin/showip
+  231  showip
+  232  ec2info
+  233  git --version
+  234  gh --version
+  235  sudo yum install git -y
+  236  git --version
+  237  sudo dnf install 'dnf-command(config-manager)'
+  238  sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+  239  sudo dnf install gh -y
+  240  gh --version
+  241  la
+  242  mkdir workspace
+  243  cd workspace
+  244  mkdir shell
+  245  cd shell
+  246  git clone https://github.com/jrodolfo/extended-grep.git
+  247  ll
+  248  cd extended-grep/
+  249  la
+  250  ./install-macos.sh 
+  251  cd ~
+  252  cd bin
+  253  ll
+  254  cp ec2info ec2info-version-1
+  255  vi ec2info
+  256  ll
+  257  cd ..
+  258  ec2info
+  259  showip
+  260  pwd
+  261  ll
+  262  cd workspace/
+  263  cd shell/extended-grep/
+  264  la
+  265  git status
+  266  git pull
+  267  la
+  268  git pull
+  269  la
+  270  ./install-linux.sh 
+  271  sudo dnf install -y ripgrep
+  272  git pull
+  273  ./install-linux.sh 
+  274  git pull
+  275  ./install-linux.sh 
+  276  sudo dnf install -y cargo
+  277  cargo install ripgrep
+  278  echo $HOME
+  279  echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+  280  source ~/.bashrc
+  281  rg --version
+  282  ./install-linux.sh 
+  283  search fox
+  284  more /home/ec2-user/search-results/fox.grepx.html
+  285  ls -la /home/ec2-user/search-results/
+  286  ls -lah /home/ec2-user/search-results/
+  287  git pull
+  288  search hello
+  289  vi /home/ec2-user/search-results/hello.grepx.html 
+  290  sudo dnf install w3m -y
+  291  w3m /home/ec2-user/search-results/hello.grepx.html 
+  292  ls -lah /home/ec2-user/search-results/ 
+  293  w3m /home/ec2-user/search-results/fox.grepx.html 
+  294  git pull
+  295  ll
+  296  ./install-linux.sh 
+  297  search
+  298  git pull
+  299  ./install-linux.sh 
+  300  search
+  301  search --format TXT fox
+  302  search --format txt fox
+  303  vi /home/ec2-user/search-results/fox.grepx.txt
+  304  ./install-linux.sh 
+  305  search --format txt fox
+  306  vi /home/ec2-user/search-results/fox.grepx.txt
+  307  date
+  308  ls -l /home/ec2-user/search-results/fox.grepx.txt
+  309  git pull
+  310  ./install-linux.sh 
+  311  search --format txt fox
+  312  vi /home/ec2-user/search-results/fox.grepx.txt
+  313  git pull
+  314  ./install-linux.sh 
+  315  java --version
+  316  uname -m
+  317  curl -LO https://github.com/adoptium/temurin25-binaries/releases/latest/download/OpenJDK25U-jdk_x64_linux_hotspot.tar.gz
+  318  sudo mkdir -p /opt/java
+  319  ll
+  320  sudo tar -xzf OpenJDK25U-jdk_* -C /opt/java
+  321  sudo tar -xzf OpenJDK25U-jdk_x64_linux_hotspot.tar.gz -C /opt/java
+  322  file OpenJDK25U-jdk_x64_linux_hotspot.tar.gz
+  323  rm OpenJDK25U-jdk_x64_linux_hotspot.tar.gz 
+  324  cd ~
+  325  la
+  326  curl -L -J -O -H "Accept: application/octet-stream" https://github.com/adoptium/temurin25-binaries/releases/latest/download/OpenJDK25U-jdk_x64_linux_hotspot.tar.gz
+  327  ll
+  328  file OpenJDK25U-jdk_x64_linux_hotspot.tar.gz 
+  329  rm -f OpenJDK25U-jdk_x64_linux_hotspot.tar.gz
+  330  curl -L -o jdk25.tar.gz https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jdk/hotspot/normal/eclipse
+  331  ll
+  332  file jdk25.tar.gz 
+  333  sudo tar -xzf jdk25.tar.gz -C /opt/java
+  334  ls /opt/java
+  335  sudo vi /etc/profile.d/java.sh
+  336  source /etc/profile.d/java.sh
+  337  [200~java -version
+  338  javac -version
+  339  java -version
+  340  javac -version
+  341  echo $JAVA_HOME
+  342  which java
+  343  cls
+  344  java -version
+  345  javac -version
+  346  echo $JAVA_HOME
+  347  sudo ln -s /opt/java/jdk-25.0.2+10/bin/java /usr/local/bin/java
+  348  sudo ln -s /opt/java/jdk-25.0.2+10/bin/javac /usr/local/bin/javac
+  349  sudo java -version
+  350  curl -LO https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
+  351  ll
+  352  file apache-maven-3.9.6-bin.tar.gz 
+  353  rm jdk25.tar.gz 
+  354  lk
+  355  ll
+  356  file apache-maven-3.9.6-bin.tar.gz 
+  357  rm -f apache-maven-3.9.6-bin.tar.gz
+  358  curl -L -O https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
+  359  ll
+  360  file apache-maven-3.9.6-bin.tar.gz 
+  361  cat /etc/os-release
+  362  ll bin
+  363  cat bin/ec2info
+  364  cd bin/
+  365  ll
+  366  rm ec2info-version-1 
+  367  ll
+  368  vi linuxinfo
+  369  chmod a+x linuxinfo 
+  370  linuxinfo
+  371  vi linuxinfo 
+  372  linuxinfo
+  373  cls
+  374  linuxinfo
+  375  cd ..
+  376  ll
+  377  file apache-maven-3.9.6-bin.tar.gz 
+  378  sudo dnf install maven -y
+  379  mvn -version
+  380  git --version
+  381  git config --global user.name "Rod Oliveira";  git config --global user.email "jrodolfo@gmail.com"
+  382  ll bin/
+  383  linuxinfo
+  384  docker
+  385  make
+  386  sudo dnf install nodejs npm -y
+  387  node -v
+  388  npm -v
+  389  sudo dnf install htop -y
+  390  htop
+  391  tree
+  392  sudo dnf install tree -y
+  393  tree
+  394  top
+  395  vim --version
+  396  cls
+  397  vim --version
+  398  vi --version
+  399  I la
+  400  la
+  401  vi ~/.vimrc
+  402  cd workspace/
+  403  ll
+  404  mkdir java
+  405  cd java
+  406  git clone https://github.com/jrodolfo/job-portal.git
+  407  ll
+  408  cd job-portal/
+  409  ll
+  410  cd job-portal-backend/
+  411  ll
+  412  cd src/
+  413  ll
+  414  cd main/
+  415  kk
+  416  ll
+  417  cd java/
+  418  ll
+  419  cd net/jrodolfo/
+  420  ll
+  421  cd jobportal/
+  422  ll
+  423  cd model/
+  424  ll
+  425  vi Job.java 
+  426  cd ../../../../
+  427  cd ../../
+  428  cd ../../../
+  429  cd ..
+  430  ll
+  431  cd shell/
+  432  ll
+  433  cd extended-grep/
+  434  ll
+  435  vi install-linux.sh 
+  436  cd ~
+  437  ll
+  438  rm -f apache-maven-3.9.6-bin.tar.gz 
+  439  la
+  440  cd workspace/java/job-portal/
+  441  git status
+  442  ll
+  443  git pull
+  444  ll
+  445  who
+  446  whoami
+  447  htop
+  448  cd ../../
+  449  cd shell/
+  450  cd extended-grep/
+  451  git status
+  452  git pull
+  453  cd ..
+  454  ll
+  455  cd ..
+  456  ll
+  457  cd java/
+  458  ll
+  459  cd job-portal/
+  460  ll
+  461  cd scripts/
+  462  ll
+  463  cd prod/
+  464  ll
+  465  chmod a+x *.sh
+  466  ll
+  467  ./stop.sh 
+  468  pwd
+  469  ls -la
+  470  ./stop.sh 
+  471  cd ../../
+  472  git status
+  473  git diff -- scripts/prod/start.sh scripts/prod/stop.sh
+  474  git restore -- scripts/prod/start.sh scripts/prod/stop.sh
+  475  git status
+  476  git pull
+  477  ll
+  478  cd scripts/prod/
+  479  ll
+  480  ./stop.sh 
+  481  cp ~/job-portal/.env ~/workspace/java/job-portal/
+  482  ./stop.sh 
+  483  ./start.sh 
+  484  ./stop.sh 
+  485  ls -l ~/job-portal/
+  486  cp *.sh ~/job-portal/
+  487  cd ../..
+  488  ll
+  489  cp docker-compose.* ~/job-portal/
+  490  cd ~/job-portal/
+  491  ll
+  492  ./stop.sh 
+  493  ./start.sh
+  494  ./stop.sh 
+  495  ll
+  496  cd workspace/
+  497  ll
+  498  cd shell/
+  499  ll
+  500  cd extended-grep/
+  501  git status
+  502  git pull
+  503  cd ..
+  504  ll
+  505  cd ..
+  506  ll
+  507  cd java/
+  508  ll
+  509  cd job-portal/
+  510  git status
+  511  git pull
+  512  ll
+  513  cd workspace/
+  514  ll
+  515  cd java/
+  516  cd job-portal/
+  517  git status
+  518  git pull
+  519  cd ..
+  520  ll
+  521  cd ..
+  522  ll
+  523  cd shell/
+  524  cd extended-grep/
+  525  git status
+  526  git pull
+  527  cd ..
+  528  cd ../java/job-portal/
+  529  git status
+  530  git pull
+  531  ll
+  532  cd scripts/
+  533  ll
+  534  cd prod/
+  535  ll
+  536  ./start.sh 
+  537  pwd
+  538  cd ..
+  539  ll
+  540  git status
+  541  git pull
+  542  ll
+  543  cd scripts/
+  544  ll
+  545  cd prod/
+  546  ll
+  547  ./start.sh 
+  548  ./stop.sh 
+  549  ll
+  550  pwd
+  551  cp * /home/ec2-user/job-portal/
+  552  cd /home/ec2-user/job-portal/
+  553  ll
+  554  ll ../workspace/java/job-portal/
+  555  cp /home/ec2-user/job-portal/ docker* .
+  556  ll
+  557  rm docker-compose.*
+  558  cp /home/ec2-user/job-portal/docker* .
+  559  ll ../workspace/java/job-portal/
+  560  pwd
+  561  cp ../workspace/java/job-portal/dock* .
+  562  ll
+  563  ./start.sh 
+  564  ./stop.sh 
+  565  ll
+  566  cd workspace/
+  567  ll
+  568  cd shell/
+  569  ll
+  570  cd extended-grep/
+  571  git status
+  572  git pull
+  573  ll
+  574  cd scripts/
+  575  ll
+  576  cd install/
+  577  ll
+  578  ./install-linux.sh 
+  579  cd ../../../
+  580  ll
+  581  search fox
+  582  cd ~/search-results/
+  583  ll
+  584  date
+  585  vi fox.grepx.html 
+  586  cd ..
+  587  ll
+  588  cd workspace/shell/
+  589  cd extended-grep/
+  590  search --format txt fox
+  591  cd ~/search-results/
+  592  ll
+  593  vi fox.grepx.txt 
+  594  search
+  595  cc ~
+  596  cd ~
+  597  la
+  598  vi ./bashrc
+  599  vi .bashrc
+  600  vi .bash_profile 
+  601  vi .bashrc
+  602  source .bashrc
+  603  vi .bashrc
+  604  source .bashrc
+  605  vi .bashrc
+  606  source .bashrc
+  607  vi .bashrc
+  608  source .bashrc
+  609  sudo
+  610  sudo vi /root/.bashrc
+  611  vi .bashrc
+  612  sudo vi /root/.bashrc
+  613  sudo ls
+  614  cd workspace/shell/extended-grep/
+  615  sudo -i
+  616  cd ~
+  617  ll
+  618  la
+  619  vi .vimrc
+  620  cd workspace/
+  621  ll
+  622  cdf shell/
+  623  ll
+  624  cd shell/extended-grep/
+  625  git status
+  626  git pull
+  627  search
+  628  git status
+  629  git pull
+  630  search
+  631  ll
+  632  cd scripts/install/
+  633  ll
+  634  ./install-linux.sh 
+  635  search
+  636  cd ..
+  637  ll
+  638  git status
+  639  git pull
+  640  cd scripts/
+  641  ll
+  642  cd uninstall/
+  643  ll
+  644  ./uninstall-linux.sh 
+  645  search
+  646  cd ..
+  647  ll
+  648  cd install/
+  649  ll
+  650  ./install-linux.sh 
+  651  search
+  652  ls /usr/share/git-core/contrib/completion/git-prompt.sh 
+  653  ll
+  654  ll bin
+  655  cd bin
+  656  cat ec2info 
+  657  cat linuxinfo 
+  658  ll
+  659  cat showip 
+  660  history
+  661  ll
+  662  history > cat history.txt
+  663  ll
+  664  rm cat
+  665  history | cat history.txt
+  666  ll
+  667  showip
+  668  history > history.txt

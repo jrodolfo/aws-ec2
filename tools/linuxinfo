@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# -------------------------------
+# Complete Linux system summary
+# -------------------------------
+
+# OS information
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS_NAME=$NAME
+    OS_VERSION=$VERSION_ID
+    OS_PRETTY=$PRETTY_NAME
+else
+    OS_NAME=$(uname -s)
+    OS_VERSION=$(uname -r)
+    OS_PRETTY="$OS_NAME $OS_VERSION"
+fi
+
+# Kernel and architecture
+KERNEL=$(uname -r)
+ARCH=$(uname -m)
+
+# CPU and memory
+VCPU=$(nproc)
+RAM=$(free -h | awk '/Mem:/ {print $2}')
+
+# Root disk
+DISK=$(df -h / | awk 'NR==2 {print $2}')
+
+# Hostname
+HOST=$(hostname)
+
+# Private IP
+PRIVATE_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+
+# Public IP (if available, may fail on some networks)
+PUBLIC_IP=$(curl -s https://checkip.amazonaws.com 2>/dev/null || echo "N/A")
+
+# Print summary
+echo "==============================="
+echo "Linux System Snapshot"
+echo "==============================="
+echo "Hostname      : $HOST"
+echo "OS            : $OS_PRETTY"
+echo "OS Name       : $OS_NAME"
+echo "Version       : $OS_VERSION"
+echo "Kernel        : $KERNEL"
+echo "Architecture  : $ARCH"
+echo "vCPUs         : $VCPU"
+echo "RAM           : $RAM"
+echo "Root Disk     : $DISK"
+echo "Private IP    : $PRIVATE_IP"
+echo "Public IP     : $PUBLIC_IP"
+echo "==============================="
+

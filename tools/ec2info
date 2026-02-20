@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# -------------------------------
+# EC2 + Linux system summary
+# -------------------------------
+
+# Get IMDSv2 token
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+    -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+# EC2 metadata
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+INSTANCE_TYPE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-type)
+AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
+REGION=${AZ::-1}  # Remove last letter for region
+
+# Linux info
+OS=$(cat /etc/os-release | awk -F= '/^PRETTY_NAME/ {print $2}' | tr -d '"')
+KERNEL=$(uname -r)
+VCPU=$(nproc)
+RAM=$(free -h | awk '/Mem:/ {print $2}')
+DISK=$(df -h / | awk 'NR==2 {print $2}')
+
+# Git info (if installed)
+GIT=$(command -v git >/dev/null 2>&1 && git --version || echo "not installed")
+GH=$(command -v gh >/dev/null 2>&1 && gh --version || echo "not installed")
+
+# Print summary
+echo "==============================="
+echo "EC2 + Linux System Summary"
+echo "==============================="
+echo "Instance ID   : $INSTANCE_ID"
+echo "Instance type : $INSTANCE_TYPE"
+echo "Region / AZ   : $REGION / $AZ"
+echo "OS            : $OS"
+echo "Kernel        : $KERNEL"
+echo "vCPUs         : $VCPU"
+echo "RAM           : $RAM"
+echo "Root Disk     : $DISK"
+echo "Git           : $GIT"
+echo "GitHub CLI    : $GH"
+echo "==============================="
+

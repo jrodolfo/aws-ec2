@@ -1,0 +1,31 @@
+name: Bootstrap Dry Run
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "bootstrap.sh"
+      - "dotfiles/**"
+      - "tools/**"
+      - "install/**"
+      - "Makefile"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "bootstrap.sh"
+      - "dotfiles/**"
+      - "tools/**"
+      - "install/**"
+      - "Makefile"
+      - ".github/workflows/**"
+
+jobs:
+  bootstrap-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run bootstrap dry-run
+        run: ./bootstrap.sh --dry-run
