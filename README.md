@@ -43,7 +43,8 @@ Common usernames:
 ## SSH Access
 
 For complete SSH setup and troubleshooting instructions, see:
-- `doc/ssh/NOTES.md`
+- [`doc/ssh/NOTES.md`](doc/ssh/NOTES.md)
+- <a href="doc/ssh/NOTES.md" target="_blank" rel="noopener noreferrer">open in a new tab</a>
 
 ## Bootstrap on a New Machine
 
