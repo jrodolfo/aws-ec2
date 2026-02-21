@@ -73,9 +73,95 @@ install_pkg() {
 
 install_base_packages() {
     local pkg
-    for pkg in git docker docker-compose-plugin maven nodejs npm htop tree curl tar; do
+    for pkg in git docker maven nodejs npm htop tree curl tar; do
         install_pkg "${pkg}"
     done
+}
+
+docker_compose_available() {
+    command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1
+}
+
+target_user_home() {
+    local home_dir=""
+    if command -v getent >/dev/null 2>&1; then
+        home_dir="$(getent passwd "${TARGET_USER}" | awk -F: '{print $6}')"
+    fi
+    if [[ -z "${home_dir}" ]]; then
+        home_dir="/home/${TARGET_USER}"
+    fi
+    printf '%s\n' "${home_dir}"
+}
+
+install_docker_compose_binary() {
+    local arch=""
+    local version="${DOCKER_COMPOSE_VERSION:-2.39.4}"
+    local url=""
+
+    case "$(uname -m)" in
+        x86_64) arch="x86_64" ;;
+        aarch64) arch="aarch64" ;;
+        *)
+            warn "Unsupported architecture for docker compose binary fallback: $(uname -m)"
+            return 1
+            ;;
+    esac
+
+    require_cmd curl
+    url="https://github.com/docker/compose/releases/download/v${version}/docker-compose-linux-${arch}"
+    run_root curl -fsSL -o /usr/local/bin/docker-compose "${url}"
+    run_root chmod 0755 /usr/local/bin/docker-compose
+    return 0
+}
+
+ensure_docker_compose_plugin_link() {
+    local home_dir
+    home_dir="$(target_user_home)"
+    local plugin_dir="${home_dir}/.docker/cli-plugins"
+    local plugin_bin="${plugin_dir}/docker-compose"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        run_root mkdir -p "${plugin_dir}"
+        run_root ln -sfn /usr/local/bin/docker-compose "${plugin_bin}"
+        return 0
+    fi
+
+    run_root mkdir -p "${plugin_dir}"
+    run_root ln -sfn /usr/local/bin/docker-compose "${plugin_bin}"
+    run_root chown -R "${TARGET_USER}":"${TARGET_USER}" "${home_dir}/.docker"
+}
+
+install_docker_compose() {
+    if docker_compose_available; then
+        log "Docker Compose already available"
+        return 0
+    fi
+
+    if install_pkg_dnf docker-compose-plugin && docker_compose_available; then
+        log "Docker Compose enabled via docker-compose-plugin package"
+        return 0
+    fi
+
+    warn "docker-compose-plugin package unavailable or did not activate docker compose."
+
+    if install_pkg_dnf docker-compose && docker_compose_available; then
+        log "Docker Compose enabled via docker-compose package"
+        return 0
+    fi
+
+    warn "docker-compose package unavailable. Trying binary fallback."
+    install_docker_compose_binary || {
+        warn "Docker Compose binary fallback failed."
+        return 1
+    }
+    ensure_docker_compose_plugin_link
+    if docker_compose_available; then
+        log "Docker Compose enabled via binary fallback"
+        return 0
+    fi
+
+    warn "Docker Compose install completed, but 'docker compose' is still not available."
+    return 1
 }
 
 install_github_cli() {
@@ -98,6 +184,8 @@ install_github_cli() {
 
 configure_docker() {
     run_root systemctl enable --now docker
+
+    install_docker_compose || warn "Docker Compose is not available yet. Re-run later or install manually."
 
     if id -nG "${TARGET_USER}" | tr ' ' '\n' | grep -qx docker; then
         log "User '${TARGET_USER}' already in docker group"

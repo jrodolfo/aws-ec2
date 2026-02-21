@@ -80,6 +80,7 @@ Useful options:
 Notes:
 - Script is tuned for Amazon Linux (`dnf`/`rpm`).
 - After Docker group changes, log out and back in.
+- Docker Compose package names may vary by AMI; the script falls back automatically if `docker-compose-plugin` is unavailable.
 
 ## Install Optional Dev Utilities (EC2)
 
