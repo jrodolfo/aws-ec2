@@ -1,4 +1,4 @@
-name: Bootstrap Dry Run
+name: Script Smoke
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
       - "dotfiles/**"
       - "ops/**"
       - "install/**"
+      - "tests/**"
       - "Makefile"
       - ".github/workflows/**"
   pull_request:
@@ -17,15 +18,28 @@ on:
       - "dotfiles/**"
       - "ops/**"
       - "install/**"
+      - "tests/**"
       - "Makefile"
       - ".github/workflows/**"
 
 jobs:
-  bootstrap-dry-run:
+  script-smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
       - name: Run bootstrap dry-run
         run: ./bootstrap.sh --dry-run
+
+      - name: Run toolchain dry-run
+        run: ./install/install-toolchain.sh --dry-run --no-update
+
+      - name: Run dev-utils dry-run
+        run: ./install/install-dev-utils.sh --dry-run --no-update
+
+      - name: Run shell tests
+        run: make test-shell

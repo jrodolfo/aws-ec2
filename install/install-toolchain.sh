@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=install/lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+
 TARGET_USER="${SUDO_USER:-${USER:-ec2-user}}"
 JAVA_MODE="distro"
 DRY_RUN=0
@@ -14,46 +18,13 @@ Install common dev/runtime toolchain packages on an EC2 Linux host.
 Options:
   -u, --user <name>             User to add to docker group (default: current login user)
   -j, --java-mode <mode>        Java install mode: distro|adoptium25 (default: distro)
+  --no-update                   Skip system package update
   -n, --dry-run                 Print actions without making changes
   -h, --help                    Show this help
 EOF
 }
 
-log() {
-    printf '%s\n' "$*"
-}
-
-warn() {
-    printf 'WARN: %s\n' "$*" >&2
-}
-
-err() {
-    printf 'ERROR: %s\n' "$*" >&2
-}
-
-run() {
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-        log "[dry-run] $*"
-        return 0
-    fi
-    "$@"
-}
-
-run_root() {
-    if [[ "${EUID}" -eq 0 ]]; then
-        run "$@"
-    else
-        run sudo "$@"
-    fi
-}
-
-require_cmd() {
-    local cmd="$1"
-    if ! command -v "${cmd}" >/dev/null 2>&1; then
-        err "Missing required command: ${cmd}"
-        exit 1
-    fi
-}
+SKIP_UPDATE=0
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
@@ -67,6 +38,9 @@ parse_args() {
                 shift
                 [[ $# -gt 0 ]] || { err "Missing value for --java-mode"; exit 1; }
                 JAVA_MODE="$1"
+                ;;
+            --no-update)
+                SKIP_UPDATE=1
                 ;;
             -n|--dry-run)
                 DRY_RUN=1
@@ -85,20 +59,6 @@ parse_args() {
     done
 }
 
-validate_os() {
-    if [[ ! -f /etc/os-release ]]; then
-        err "Cannot detect OS: /etc/os-release not found"
-        exit 1
-    fi
-
-    # shellcheck source=/dev/null
-    . /etc/os-release
-    if [[ "${ID:-}" != "amzn" ]]; then
-        warn "This script is tuned for Amazon Linux (detected ID=${ID:-unknown})."
-        warn "Proceeding, but package names or behavior may differ."
-    fi
-}
-
 ensure_user_exists() {
     if ! id "${TARGET_USER}" >/dev/null 2>&1; then
         err "User does not exist: ${TARGET_USER}"
@@ -106,17 +66,9 @@ ensure_user_exists() {
     fi
 }
 
-is_pkg_installed() {
-    rpm -q "$1" >/dev/null 2>&1
-}
-
 install_pkg() {
     local pkg="$1"
-    if is_pkg_installed "${pkg}"; then
-        log "Already installed: ${pkg}"
-    else
-        run_root dnf install -y "${pkg}"
-    fi
+    install_pkg_dnf "${pkg}"
 }
 
 install_base_packages() {
@@ -132,12 +84,12 @@ install_github_cli() {
         return 0
     fi
 
-    if run_root dnf install -y gh; then
+    if install_pkg_dnf gh; then
         return 0
     fi
 
     warn "Package 'gh' not available in current repos. Adding official GitHub CLI repo."
-    if ! is_pkg_installed dnf-plugins-core; then
+    if ! is_pkg_installed_rpm dnf-plugins-core; then
         run_root dnf install -y dnf-plugins-core || run_root dnf install -y 'dnf-command(config-manager)'
     fi
     run_root dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
@@ -151,7 +103,11 @@ configure_docker() {
         log "User '${TARGET_USER}' already in docker group"
     else
         run_root usermod -aG docker "${TARGET_USER}"
-        warn "Added '${TARGET_USER}' to docker group. Re-login is required for group changes to take effect."
+        if [[ "${DRY_RUN}" -eq 1 ]]; then
+            warn "Would add '${TARGET_USER}' to docker group. Re-login is required for group changes to take effect."
+        else
+            warn "Added '${TARGET_USER}' to docker group. Re-login is required for group changes to take effect."
+        fi
     fi
 }
 
@@ -263,17 +219,22 @@ verify_installation() {
 
 main() {
     parse_args "$@"
-    validate_os
+    validate_os_amzn
     ensure_user_exists
-    require_cmd dnf
-    require_cmd rpm
+    if [[ "${DRY_RUN}" -eq 0 ]]; then
+        require_cmd dnf
+        require_cmd rpm
+    fi
 
     log "Starting toolchain installation"
     log "Target user : ${TARGET_USER}"
     log "Java mode   : ${JAVA_MODE}"
     [[ "${DRY_RUN}" -eq 1 ]] && log "Dry run     : enabled"
+    [[ "${SKIP_UPDATE}" -eq 1 ]] && log "Update step : skipped"
 
-    run_root dnf update -y
+    if [[ "${SKIP_UPDATE}" -eq 0 ]]; then
+        run_root dnf update -y
+    fi
     install_base_packages
     install_github_cli
     configure_docker

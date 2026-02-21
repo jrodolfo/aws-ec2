@@ -7,6 +7,8 @@ Reusable server setup repository for provisioning a fresh Linux EC2 instance wit
 ```text
 aws-ec2/
 ├── install/
+│   ├── lib/
+│   │   └── common.sh
 │   ├── install-dev-utils.sh
 │   └── install-toolchain.sh
 ├── dotfiles/
@@ -18,6 +20,8 @@ aws-ec2/
 │   ├── ec2info
 │   ├── linuxinfo
 │   └── showip
+├── tests/
+│   └── scripts.bats
 └── bootstrap.sh
 ```
 
@@ -70,6 +74,7 @@ Useful options:
 
 ```bash
 ./install/install-toolchain.sh --dry-run
+./install/install-toolchain.sh --no-update
 ./install/install-toolchain.sh --user ec2-user
 ./install/install-toolchain.sh --java-mode distro
 ./install/install-toolchain.sh --java-mode adoptium25
@@ -100,6 +105,7 @@ Useful options:
 
 ```bash
 ./install/install-dev-utils.sh --dry-run
+./install/install-dev-utils.sh --no-update
 ```
 
 ## Fresh EC2 Minimum Sequence
@@ -151,11 +157,15 @@ make install-toolchain-dry-run
 make install-dev-utils
 make install-dev-utils-dry-run
 make lint-shell
+make test-shell
 ```
 
 ## CI
 
-GitHub Actions runs shell checks on every push and pull request:
+GitHub Actions runs shell checks and smoke tests on every push and pull request:
 - `bash -n bootstrap.sh`
 - `make lint-shell`
-- `./bootstrap.sh --dry-run` (bootstrap integration smoke test)
+- `./bootstrap.sh --dry-run`
+- `./install/install-toolchain.sh --dry-run --no-update`
+- `./install/install-dev-utils.sh --dry-run --no-update`
+- `make test-shell`

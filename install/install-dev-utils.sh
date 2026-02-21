@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=install/lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+
 DRY_RUN=0
+SKIP_UPDATE=0
 
 usage() {
     cat <<'EOF'
@@ -11,42 +16,18 @@ Install optional developer utilities for EC2 hosts.
 This script intentionally does not install 'act'.
 
 Options:
+  --no-update     Skip system package update
   -n, --dry-run   Print actions without making changes
   -h, --help      Show this help
 EOF
 }
 
-log() {
-    printf '%s\n' "$*"
-}
-
-warn() {
-    printf 'WARN: %s\n' "$*" >&2
-}
-
-err() {
-    printf 'ERROR: %s\n' "$*" >&2
-}
-
-run() {
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-        log "[dry-run] $*"
-        return 0
-    fi
-    "$@"
-}
-
-run_root() {
-    if [[ "${EUID}" -eq 0 ]]; then
-        run "$@"
-    else
-        run sudo "$@"
-    fi
-}
-
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --no-update)
+                SKIP_UPDATE=1
+                ;;
             -n|--dry-run)
                 DRY_RUN=1
                 ;;
@@ -64,44 +45,9 @@ parse_args() {
     done
 }
 
-require_cmd() {
-    local cmd="$1"
-    if ! command -v "${cmd}" >/dev/null 2>&1; then
-        err "Missing required command: ${cmd}"
-        exit 1
-    fi
-}
-
-validate_os() {
-    if [[ ! -f /etc/os-release ]]; then
-        err "Cannot detect OS: /etc/os-release not found"
-        exit 1
-    fi
-
-    # shellcheck source=/dev/null
-    . /etc/os-release
-    if [[ "${ID:-}" != "amzn" ]]; then
-        warn "This script is tuned for Amazon Linux (detected ID=${ID:-unknown})."
-        warn "Proceeding, but package names may differ."
-    fi
-}
-
-is_pkg_installed() {
-    rpm -q "$1" >/dev/null 2>&1
-}
-
 install_pkg_if_present() {
     local pkg="$1"
-    if is_pkg_installed "${pkg}"; then
-        log "Already installed: ${pkg}"
-        return 0
-    fi
-
-    if run_root dnf install -y "${pkg}"; then
-        return 0
-    fi
-
-    return 1
+    install_pkg_dnf "${pkg}"
 }
 
 install_github_cli() {
@@ -115,7 +61,7 @@ install_github_cli() {
     fi
 
     warn "Package 'gh' not available in current repos. Adding official GitHub CLI repo."
-    if ! is_pkg_installed dnf-plugins-core; then
+    if ! is_pkg_installed_rpm dnf-plugins-core; then
         run_root dnf install -y dnf-plugins-core || run_root dnf install -y 'dnf-command(config-manager)'
     fi
     run_root dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
@@ -173,15 +119,20 @@ verify_installation() {
 
 main() {
     parse_args "$@"
-    validate_os
-    require_cmd dnf
-    require_cmd rpm
+    validate_os_amzn
+    if [[ "${DRY_RUN}" -eq 0 ]]; then
+        require_cmd dnf
+        require_cmd rpm
+    fi
 
     log "Starting developer utility installation"
     [[ "${DRY_RUN}" -eq 1 ]] && log "Dry run : enabled"
+    [[ "${SKIP_UPDATE}" -eq 1 ]] && log "Update step : skipped"
     log "Excluding tool: act"
 
-    run_root dnf update -y
+    if [[ "${SKIP_UPDATE}" -eq 0 ]]; then
+        run_root dnf update -y
+    fi
 
     install_pkg_if_present shellcheck || warn "shellcheck package not available"
     install_pkg_if_present shfmt || warn "shfmt package not available"
