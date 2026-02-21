@@ -7,6 +7,7 @@ Reusable server setup repository for provisioning a fresh Linux EC2 instance wit
 ```text
 aws-ec2/
 ├── install/
+│   ├── install-dev-utils.sh
 │   └── install-toolchain.sh
 ├── dotfiles/
 │   ├── .bashrc
@@ -78,6 +79,29 @@ Notes:
 - Script is tuned for Amazon Linux (`dnf`/`rpm`).
 - After Docker group changes, log out and back in.
 
+## Install Optional Dev Utilities (EC2)
+
+```bash
+./install/install-dev-utils.sh
+```
+
+Installs optional utilities useful for terminal workflows on EC2:
+- `shellcheck`
+- `shfmt`
+- `jq`
+- `yq`
+- `ripgrep` (`rg`)
+- `fd`/`fdfind`
+- `gh`
+
+`act` is intentionally excluded (recommended for local dev machines, not server hosts).
+
+Useful options:
+
+```bash
+./install/install-dev-utils.sh --dry-run
+```
+
 ## Fresh EC2 Minimum Sequence
 
 On a brand-new Amazon Linux EC2 instance, run this first:
@@ -88,6 +112,7 @@ sudo dnf install -y git
 git clone https://github.com/<your-user>/<your-repo>.git
 cd <your-repo>
 ./install/install-toolchain.sh
+./install/install-dev-utils.sh
 ./bootstrap.sh
 ```
 
@@ -97,6 +122,8 @@ Optional (if you prefer Make targets):
 sudo dnf install -y make
 make install-toolchain-dry-run
 make install-toolchain
+make install-dev-utils-dry-run
+make install-dev-utils
 make bootstrap
 ```
 
@@ -121,6 +148,8 @@ make dry-run
 make force
 make install-toolchain
 make install-toolchain-dry-run
+make install-dev-utils
+make install-dev-utils-dry-run
 make lint-shell
 ```
 
