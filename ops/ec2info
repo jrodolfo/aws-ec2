@@ -15,7 +15,7 @@ AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest
 REGION=${AZ::-1}  # Remove last letter for region
 
 # Linux info
-OS=$(cat /etc/os-release | awk -F= '/^PRETTY_NAME/ {print $2}' | tr -d '"')
+OS=$(awk -F= '/^PRETTY_NAME/ {print $2}' /etc/os-release | tr -d '"')
 KERNEL=$(uname -r)
 VCPU=$(nproc)
 RAM=$(free -h | awk '/Mem:/ {print $2}')
@@ -40,4 +40,3 @@ echo "Root Disk     : $DISK"
 echo "Git           : $GIT"
 echo "GitHub CLI    : $GH"
 echo "==============================="
-

@@ -6,6 +6,8 @@
 
 # OS information
 if [ -f /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    # shellcheck source=/etc/os-release
     . /etc/os-release
     OS_NAME=$NAME
     OS_VERSION=$VERSION_ID
@@ -52,4 +54,3 @@ echo "Root Disk     : $DISK"
 echo "Private IP    : $PRIVATE_IP"
 echo "Public IP     : $PUBLIC_IP"
 echo "==============================="
-

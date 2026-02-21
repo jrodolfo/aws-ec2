@@ -38,7 +38,7 @@ install-dev-utils-dry-run:
 
 lint-shell:
 	@if command -v shellcheck >/dev/null 2>&1; then \
-		shellcheck $(SHELL_SCRIPTS); \
+		shellcheck -x $(SHELL_SCRIPTS); \
 	else \
 		echo "shellcheck not found. Install it, then re-run 'make lint-shell'."; \
 	fi

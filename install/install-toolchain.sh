@@ -197,7 +197,12 @@ install_java_adoptium25() {
     fi
 
     local jdk_dir
-    jdk_dir="$(ls -1dt /opt/java/jdk-25* 2>/dev/null | head -n1 || true)"
+    jdk_dir="$(
+        find /opt/java -maxdepth 1 -type d -name 'jdk-25*' -printf '%T@ %p\n' 2>/dev/null \
+            | sort -nr \
+            | head -n1 \
+            | cut -d' ' -f2-
+    )"
     if [[ -z "${jdk_dir}" ]]; then
         err "Could not find extracted JDK under /opt/java/jdk-25*"
         exit 1
