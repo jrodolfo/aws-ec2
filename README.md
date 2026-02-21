@@ -2,66 +2,58 @@
 
 Reusable server setup repository for provisioning a fresh Linux EC2 instance with personal dotfiles and utility scripts.
 
-## Repository Layout
+## Who This Is For
 
-```text
-aws-ec2/
-├── install/
-│   ├── lib/
-│   │   └── common.sh
-│   ├── install-dev-utils.sh
-│   └── install-toolchain.sh
-├── dotfiles/
-│   ├── .bashrc
-│   ├── .bash_profile
-│   ├── .vimrc
-│   └── .gitconfig
-├── ops/
-│   ├── ec2info
-│   ├── linuxinfo
-│   └── showip
-├── tests/
-│   └── scripts.bats
-└── bootstrap.sh
-```
+- Use as-is: run this repo directly to apply the author's EC2 setup.
+- Customize: fork/edit `dotfiles/` and `ops/` to apply your own setup.
 
-## Pull Files from an Existing EC2 Host
+## Fresh EC2 Minimum Sequence
 
-Use your PEM key and correct SSH username for the AMI:
+### Use As-Is (author setup)
 
 ```bash
-scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bashrc dotfiles/
-scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bash_profile dotfiles/
-scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.vimrc dotfiles/
-scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:'~/bin/*' ops/
+sudo dnf update -y
+sudo dnf install -y git
+git clone https://github.com/jrodolfo/aws-ec2.git
+cd aws-ec2
+./install/install-toolchain.sh
+./install/install-dev-utils.sh
+./bootstrap.sh
 ```
 
-Common usernames:
-- Amazon Linux: `ec2-user`
-- Ubuntu: `ubuntu`
+Optional (if you prefer Make targets):
+
+```bash
+sudo dnf install -y make
+make install-toolchain-dry-run
+make install-toolchain
+make install-dev-utils-dry-run
+make install-dev-utils
+make bootstrap
+```
+
+If the repository is private, configure GitHub authentication before `git clone`.
+
+### Customize for Your Own Setup
+
+If you want your own configuration:
+
+1. Fork this repository.
+2. Replace files in `dotfiles/` and `ops/` with your own.
+3. Run:
+
+```bash
+./install/install-toolchain.sh
+./install/install-dev-utils.sh
+./bootstrap.sh
+```
+
+`bootstrap.sh` installs whatever is currently in `dotfiles/` and `ops/`.
 
 ## SSH Access
 
 For complete SSH setup and troubleshooting instructions, see:
 - [`doc/ssh/NOTES.md`](doc/ssh/NOTES.md)
-
-## Bootstrap on a New Machine
-
-```bash
-chmod +x bootstrap.sh
-./bootstrap.sh
-```
-
-Or use Make:
-
-```bash
-make bootstrap
-```
-
-What it does:
-- installs dotfiles to `$HOME`
-- installs EC2 helper scripts from `ops/` to `$HOME/.local/bin`
-- preserves replaced files in `~/.bootstrap-backups/<timestamp>/`
 
 ## Install Base Toolchain (EC2)
 
@@ -125,32 +117,38 @@ Useful options:
 ./install/install-dev-utils.sh --no-update
 ```
 
-## Fresh EC2 Minimum Sequence
-
-On a brand-new Amazon Linux EC2 instance, run this first:
+## Bootstrap on a New Machine
 
 ```bash
-sudo dnf update -y
-sudo dnf install -y git
-git clone https://github.com/jrodolfo/aws-ec2.git
-cd aws-ec2
-./install/install-toolchain.sh
-./install/install-dev-utils.sh
+chmod +x bootstrap.sh
 ./bootstrap.sh
 ```
 
-Optional (if you prefer Make targets):
+Or use Make:
 
 ```bash
-sudo dnf install -y make
-make install-toolchain-dry-run
-make install-toolchain
-make install-dev-utils-dry-run
-make install-dev-utils
 make bootstrap
 ```
 
-If the repository is private, configure GitHub authentication before `git clone`.
+What it does:
+- installs dotfiles to `$HOME`
+- installs EC2 helper scripts from `ops/` to `$HOME/.local/bin`
+- preserves replaced files in `~/.bootstrap-backups/<timestamp>/`
+
+## Pull Files from an Existing EC2 Host
+
+Use your PEM key and correct SSH username for the AMI:
+
+```bash
+scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bashrc dotfiles/
+scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bash_profile dotfiles/
+scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.vimrc dotfiles/
+scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:'~/bin/*' ops/
+```
+
+Common usernames:
+- Amazon Linux: `ec2-user`
+- Ubuntu: `ubuntu`
 
 ## Bootstrap Options
 
@@ -186,3 +184,26 @@ GitHub Actions runs shell checks and smoke tests on every push and pull request:
 - `./install/install-toolchain.sh --dry-run --no-update`
 - `./install/install-dev-utils.sh --dry-run --no-update`
 - `make test-shell`
+
+## Repository Layout
+
+```text
+aws-ec2/
+├── install/
+│   ├── lib/
+│   │   └── common.sh
+│   ├── install-dev-utils.sh
+│   └── install-toolchain.sh
+├── dotfiles/
+│   ├── .bashrc
+│   ├── .bash_profile
+│   ├── .vimrc
+│   └── .gitconfig
+├── ops/
+│   ├── ec2info
+│   ├── linuxinfo
+│   └── showip
+├── tests/
+│   └── scripts.bats
+└── bootstrap.sh
+```
