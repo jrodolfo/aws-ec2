@@ -16,3 +16,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+doc/notes/dev-notes.txt
+doc/skills/
