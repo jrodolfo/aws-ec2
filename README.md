@@ -7,13 +7,13 @@ Reusable server setup repository for provisioning a fresh Linux EC2 instance wit
 ```text
 aws-ec2/
 ├── install/
-│   └── install-tools.sh
+│   └── install-toolchain.sh
 ├── dotfiles/
 │   ├── .bashrc
 │   ├── .bash_profile
 │   ├── .vimrc
 │   └── .gitconfig
-├── tools/
+├── ops/
 │   ├── ec2info
 │   ├── linuxinfo
 │   └── showip
@@ -28,7 +28,7 @@ Use your PEM key and correct SSH username for the AMI:
 scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bashrc dotfiles/
 scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bash_profile dotfiles/
 scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.vimrc dotfiles/
-scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:'~/bin/*' tools/
+scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:'~/bin/*' ops/
 ```
 
 Common usernames:
@@ -50,13 +50,13 @@ make bootstrap
 
 What it does:
 - installs dotfiles to `$HOME`
-- installs scripts from `tools/` to `$HOME/.local/bin`
+- installs EC2 helper scripts from `ops/` to `$HOME/.local/bin`
 - preserves replaced files in `~/.bootstrap-backups/<timestamp>/`
 
-## Install Base Tools (EC2)
+## Install Base Toolchain (EC2)
 
 ```bash
-./install/install-tools.sh
+./install/install-toolchain.sh
 ```
 
 Default behavior:
@@ -68,10 +68,10 @@ Default behavior:
 Useful options:
 
 ```bash
-./install/install-tools.sh --dry-run
-./install/install-tools.sh --user ec2-user
-./install/install-tools.sh --java-mode distro
-./install/install-tools.sh --java-mode adoptium25
+./install/install-toolchain.sh --dry-run
+./install/install-toolchain.sh --user ec2-user
+./install/install-toolchain.sh --java-mode distro
+./install/install-toolchain.sh --java-mode adoptium25
 ```
 
 Notes:
@@ -87,7 +87,7 @@ sudo dnf update -y
 sudo dnf install -y git
 git clone https://github.com/<your-user>/<your-repo>.git
 cd <your-repo>
-./install/install-tools.sh
+./install/install-toolchain.sh
 ./bootstrap.sh
 ```
 
@@ -95,8 +95,8 @@ Optional (if you prefer Make targets):
 
 ```bash
 sudo dnf install -y make
-make install-tools-dry-run
-make install-tools
+make install-toolchain-dry-run
+make install-toolchain
 make bootstrap
 ```
 
@@ -119,8 +119,8 @@ If the repository is private, configure GitHub authentication before `git clone`
 make help
 make dry-run
 make force
-make install-tools
-make install-tools-dry-run
+make install-toolchain
+make install-toolchain-dry-run
 make lint-shell
 ```
 

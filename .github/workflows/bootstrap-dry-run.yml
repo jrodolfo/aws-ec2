@@ -7,7 +7,7 @@ on:
     paths:
       - "bootstrap.sh"
       - "dotfiles/**"
-      - "tools/**"
+      - "ops/**"
       - "install/**"
       - "Makefile"
       - ".github/workflows/**"
@@ -15,7 +15,7 @@ on:
     paths:
       - "bootstrap.sh"
       - "dotfiles/**"
-      - "tools/**"
+      - "ops/**"
       - "install/**"
       - "Makefile"
       - ".github/workflows/**"

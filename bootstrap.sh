@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
-TOOLS_DIR="${SCRIPT_DIR}/tools"
+OPS_DIR="${SCRIPT_DIR}/ops"
 BIN_DIR="${HOME}/.local/bin"
 BACKUP_DIR="${HOME}/.bootstrap-backups/$(date +%Y%m%d-%H%M%S)"
 MADE_BACKUP=0
@@ -18,7 +18,7 @@ usage() {
     cat <<'EOF'
 Usage: ./bootstrap.sh [OPTIONS]
 
-Install dotfiles and tools into the current user's home directory.
+Install dotfiles and EC2 helper scripts into the current user's home directory.
 
 Options:
   -n, --dry-run   Show planned actions without changing files
@@ -117,10 +117,10 @@ main() {
     fi
 
     shopt -s nullglob
-    local tool
-    for tool in "${TOOLS_DIR}"/*; do
-        [[ -f "${tool}" ]] || continue
-        backup_and_install_file "${tool}" "${BIN_DIR}/$(basename "${tool}")" 0755
+    local script
+    for script in "${OPS_DIR}"/*; do
+        [[ -f "${script}" ]] || continue
+        backup_and_install_file "${script}" "${BIN_DIR}/$(basename "${script}")" 0755
     done
     shopt -u nullglob
 

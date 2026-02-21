@@ -1,16 +1,16 @@
 SHELL := /usr/bin/env bash
 
-SHELL_SCRIPTS := bootstrap.sh install/install-tools.sh $(wildcard tools/*)
+SHELL_SCRIPTS := bootstrap.sh install/install-toolchain.sh $(wildcard ops/*)
 
-.PHONY: help bootstrap dry-run force install-tools install-tools-dry-run lint-shell
+.PHONY: help bootstrap dry-run force install-toolchain install-toolchain-dry-run lint-shell
 
 help:
 	@echo "Targets:"
 	@echo "  make bootstrap   Run bootstrap installer"
 	@echo "  make dry-run     Preview bootstrap changes"
 	@echo "  make force       Reinstall all managed files"
-	@echo "  make install-tools          Install base machine tools"
-	@echo "  make install-tools-dry-run  Preview tool installation"
+	@echo "  make install-toolchain          Install base machine toolchain"
+	@echo "  make install-toolchain-dry-run  Preview toolchain installation"
 	@echo "  make lint-shell  Lint shell scripts with shellcheck"
 
 bootstrap:
@@ -22,11 +22,11 @@ dry-run:
 force:
 	./bootstrap.sh --force
 
-install-tools:
-	./install/install-tools.sh
+install-toolchain:
+	./install/install-toolchain.sh
 
-install-tools-dry-run:
-	./install/install-tools.sh --dry-run
+install-toolchain-dry-run:
+	./install/install-toolchain.sh --dry-run
 
 lint-shell:
 	@if command -v shellcheck >/dev/null 2>&1; then \

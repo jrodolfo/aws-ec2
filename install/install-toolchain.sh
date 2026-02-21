@@ -7,9 +7,9 @@ DRY_RUN=0
 
 usage() {
     cat <<'EOF'
-Usage: ./install/install-tools.sh [OPTIONS]
+Usage: ./install/install-toolchain.sh [OPTIONS]
 
-Install common dev/runtime tools on an EC2 Linux host.
+Install common dev/runtime toolchain packages on an EC2 Linux host.
 
 Options:
   -u, --user <name>             User to add to docker group (default: current login user)
@@ -234,7 +234,7 @@ print_version_if_available() {
 
 verify_installation() {
     log ""
-    log "Installed tool versions:"
+    log "Installed toolchain versions:"
     print_version_if_available "Docker" docker --version
 
     if command -v docker >/dev/null 2>&1; then
@@ -263,7 +263,7 @@ main() {
     require_cmd dnf
     require_cmd rpm
 
-    log "Starting tool installation"
+    log "Starting toolchain installation"
     log "Target user : ${TARGET_USER}"
     log "Java mode   : ${JAVA_MODE}"
     [[ "${DRY_RUN}" -eq 1 ]] && log "Dry run     : enabled"
