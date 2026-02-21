@@ -40,6 +40,11 @@ Common usernames:
 - Amazon Linux: `ec2-user`
 - Ubuntu: `ubuntu`
 
+## SSH Access
+
+For complete SSH setup and troubleshooting instructions, see:
+- `doc/ssh/NOTES.md`
+
 ## Bootstrap on a New Machine
 
 ```bash
