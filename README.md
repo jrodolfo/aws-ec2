@@ -102,6 +102,13 @@ Installs optional utilities useful for terminal workflows on EC2:
 - `yamllint`
 - `actionlint`
 - `bats`
+- `git-delta`
+- `fzf`
+- `zoxide`
+- `just`
+- `tokei`
+- `hyperfine`
+- `watch` (installed only if missing)
 
 `act` is intentionally excluded (recommended for local dev machines, not server hosts).
 `gnu-sed` and `coreutils` are also not needed on EC2 (Amazon Linux already provides GNU tools).
@@ -120,6 +127,8 @@ PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
 ```
 
 Use this PATH tweak on macOS only. Do not add it to EC2 startup files.
+
+Homebrew-specific `fzf` Vim runtime examples (for example `set rtp+=/opt/homebrew/opt/fzf`) are also macOS-only and should not be added to EC2 `.vimrc`.
 
 ## Fresh EC2 Minimum Sequence
 

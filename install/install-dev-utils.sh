@@ -85,6 +85,25 @@ install_fd() {
     warn "Could not install fd (fd-find/fd package unavailable)."
 }
 
+install_watch_if_missing() {
+    if command -v watch >/dev/null 2>&1; then
+        log "Already installed: watch"
+        return 0
+    fi
+
+    install_pkg_if_present procps-ng || install_pkg_if_present watch || warn "Could not install watch"
+}
+
+install_productivity_tools() {
+    install_pkg_if_present git-delta || warn "git-delta package not available"
+    install_pkg_if_present fzf || warn "fzf package not available"
+    install_pkg_if_present zoxide || warn "zoxide package not available"
+    install_pkg_if_present just || warn "just package not available"
+    install_pkg_if_present tokei || warn "tokei package not available"
+    install_pkg_if_present hyperfine || warn "hyperfine package not available"
+    install_watch_if_missing
+}
+
 install_bats() {
     if command -v bats >/dev/null 2>&1; then
         log "Already installed: bats"
@@ -161,6 +180,13 @@ verify_installation() {
     print_version_if_available "yamllint" yamllint --version
     print_version_if_available "actionlint" actionlint -version
     print_version_if_available "bats" bats --version
+    print_version_if_available "delta" delta --version
+    print_version_if_available "fzf" fzf --version
+    print_version_if_available "zoxide" zoxide --version
+    print_version_if_available "just" just --version
+    print_version_if_available "tokei" tokei --version
+    print_version_if_available "hyperfine" hyperfine --version
+    print_version_if_available "watch" watch --version
 
     if command -v fd >/dev/null 2>&1; then
         printf '%-16s %s\n' "fd:" "$(fd --version 2>/dev/null | head -n1)"
@@ -199,6 +225,7 @@ main() {
     install_pkg_if_present pre-commit || warn "pre-commit package not available"
     install_pkg_if_present yamllint || warn "yamllint package not available"
     install_fd
+    install_productivity_tools
     install_bats
     install_actionlint || warn "actionlint could not be installed"
     install_github_cli
