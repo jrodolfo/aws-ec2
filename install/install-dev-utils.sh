@@ -85,6 +85,59 @@ install_fd() {
     warn "Could not install fd (fd-find/fd package unavailable)."
 }
 
+install_bats() {
+    if command -v bats >/dev/null 2>&1; then
+        log "Already installed: bats"
+        return 0
+    fi
+
+    if install_pkg_if_present bats; then
+        return 0
+    fi
+
+    if install_pkg_if_present bats-core; then
+        return 0
+    fi
+
+    warn "Could not install bats (bats/bats-core package unavailable)."
+}
+
+install_actionlint() {
+    if command -v actionlint >/dev/null 2>&1; then
+        log "Already installed: actionlint"
+        return 0
+    fi
+
+    if install_pkg_if_present actionlint; then
+        return 0
+    fi
+
+    local arch=""
+    local version="${ACTIONLINT_VERSION:-1.7.4}"
+    local tmp_dir="/tmp/aws-ec2-actionlint"
+    local tarball="${tmp_dir}/actionlint.tar.gz"
+    local url=""
+
+    case "$(uname -m)" in
+        x86_64) arch="amd64" ;;
+        aarch64) arch="arm64" ;;
+        *)
+            warn "Unsupported architecture for actionlint fallback: $(uname -m)"
+            return 1
+            ;;
+    esac
+
+    require_cmd curl
+    require_cmd tar
+    url="https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_${arch}.tar.gz"
+
+    run rm -rf "${tmp_dir}"
+    run mkdir -p "${tmp_dir}"
+    run curl -fsSL -o "${tarball}" "${url}"
+    run tar -xzf "${tarball}" -C "${tmp_dir}"
+    run_root install -m 0755 "${tmp_dir}/actionlint" /usr/local/bin/actionlint
+}
+
 print_version_if_available() {
     local label="$1"
     local bin="$2"
@@ -104,6 +157,10 @@ verify_installation() {
     print_version_if_available "jq" jq --version
     print_version_if_available "yq" yq --version
     print_version_if_available "ripgrep" rg --version
+    print_version_if_available "pre-commit" pre-commit --version
+    print_version_if_available "yamllint" yamllint --version
+    print_version_if_available "actionlint" actionlint -version
+    print_version_if_available "bats" bats --version
 
     if command -v fd >/dev/null 2>&1; then
         printf '%-16s %s\n' "fd:" "$(fd --version 2>/dev/null | head -n1)"
@@ -139,7 +196,11 @@ main() {
     install_pkg_if_present jq || warn "jq package not available"
     install_pkg_if_present yq || warn "yq package not available"
     install_pkg_if_present ripgrep || warn "ripgrep package not available"
+    install_pkg_if_present pre-commit || warn "pre-commit package not available"
+    install_pkg_if_present yamllint || warn "yamllint package not available"
     install_fd
+    install_bats
+    install_actionlint || warn "actionlint could not be installed"
     install_github_cli
 
     verify_installation

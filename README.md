@@ -98,8 +98,13 @@ Installs optional utilities useful for terminal workflows on EC2:
 - `ripgrep` (`rg`)
 - `fd`/`fdfind`
 - `gh`
+- `pre-commit`
+- `yamllint`
+- `actionlint`
+- `bats`
 
 `act` is intentionally excluded (recommended for local dev machines, not server hosts).
+`gnu-sed` and `coreutils` are also not needed on EC2 (Amazon Linux already provides GNU tools).
 
 Useful options:
 
@@ -107,6 +112,14 @@ Useful options:
 ./install/install-dev-utils.sh --dry-run
 ./install/install-dev-utils.sh --no-update
 ```
+
+Mac-only note:
+
+```bash
+PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
+```
+
+Use this PATH tweak on macOS only. Do not add it to EC2 startup files.
 
 ## Fresh EC2 Minimum Sequence
 
