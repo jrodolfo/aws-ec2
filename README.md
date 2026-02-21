@@ -120,16 +120,6 @@ Useful options:
 ./install/install-dev-utils.sh --no-update
 ```
 
-Mac-only note:
-
-```bash
-PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
-```
-
-Use this PATH tweak on macOS only. Do not add it to EC2 startup files.
-
-Homebrew-specific `fzf` Vim runtime examples (for example `set rtp+=/opt/homebrew/opt/fzf`) are also macOS-only and should not be added to EC2 `.vimrc`.
-
 ## Fresh EC2 Minimum Sequence
 
 On a brand-new Amazon Linux EC2 instance, run this first:
@@ -137,8 +127,8 @@ On a brand-new Amazon Linux EC2 instance, run this first:
 ```bash
 sudo dnf update -y
 sudo dnf install -y git
-git clone https://github.com/<your-user>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/jrodolfo/aws-ec2.git
+cd aws-ec2
 ./install/install-toolchain.sh
 ./install/install-dev-utils.sh
 ./bootstrap.sh
