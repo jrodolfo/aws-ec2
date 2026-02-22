@@ -82,20 +82,15 @@ docker_compose_available() {
     command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1
 }
 
-target_user_home() {
-    local home_dir=""
-    if command -v getent >/dev/null 2>&1; then
-        home_dir="$(getent passwd "${TARGET_USER}" | awk -F: '{print $6}')"
-    fi
-    if [[ -z "${home_dir}" ]]; then
-        home_dir="/home/${TARGET_USER}"
-    fi
-    printf '%s\n' "${home_dir}"
+docker_compose_legacy_available() {
+    command -v docker-compose >/dev/null 2>&1
 }
 
 install_docker_compose_binary() {
     local arch=""
     local version="${DOCKER_COMPOSE_VERSION:-2.39.4}"
+    local plugin_dir="/usr/libexec/docker/cli-plugins"
+    local plugin_bin="${plugin_dir}/docker-compose"
     local url=""
 
     case "$(uname -m)" in
@@ -108,27 +103,15 @@ install_docker_compose_binary() {
     esac
 
     require_cmd curl
+    require_cmd install
     url="https://github.com/docker/compose/releases/download/v${version}/docker-compose-linux-${arch}"
-    run_root curl -fsSL -o /usr/local/bin/docker-compose "${url}"
-    run_root chmod 0755 /usr/local/bin/docker-compose
-    return 0
-}
-
-ensure_docker_compose_plugin_link() {
-    local home_dir
-    home_dir="$(target_user_home)"
-    local plugin_dir="${home_dir}/.docker/cli-plugins"
-    local plugin_bin="${plugin_dir}/docker-compose"
-
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-        run_root mkdir -p "${plugin_dir}"
-        run_root ln -sfn /usr/local/bin/docker-compose "${plugin_bin}"
-        return 0
-    fi
-
     run_root mkdir -p "${plugin_dir}"
-    run_root ln -sfn /usr/local/bin/docker-compose "${plugin_bin}"
-    run_root chown -R "${TARGET_USER}":"${TARGET_USER}" "${home_dir}/.docker"
+    run_root curl -fsSL -o "${plugin_bin}" "${url}"
+    run_root chmod 0755 "${plugin_bin}"
+
+    # Compatibility symlink for workflows that still call docker-compose directly.
+    run_root ln -sfn "${plugin_bin}" /usr/local/bin/docker-compose
+    return 0
 }
 
 install_docker_compose() {
@@ -154,13 +137,12 @@ install_docker_compose() {
         warn "Docker Compose binary fallback failed."
         return 1
     }
-    ensure_docker_compose_plugin_link
-    if docker_compose_available; then
+    if docker_compose_available || docker_compose_legacy_available; then
         log "Docker Compose enabled via binary fallback"
         return 0
     fi
 
-    warn "Docker Compose install completed, but 'docker compose' is still not available."
+    warn "Docker Compose install completed, but compose commands are still unavailable."
     return 1
 }
 
@@ -292,7 +274,13 @@ verify_installation() {
         if [[ -n "${compose_version}" ]]; then
             printf '%-16s %s\n' "Docker Compose:" "${compose_version}"
         else
-            printf '%-16s %s\n' "Docker Compose:" "not available"
+            local legacy_compose_version
+            legacy_compose_version="$(docker-compose version 2>/dev/null | head -n1 || true)"
+            if [[ -n "${legacy_compose_version}" ]]; then
+                printf '%-16s %s\n' "Docker Compose:" "${legacy_compose_version} (legacy docker-compose)"
+            else
+                printf '%-16s %s\n' "Docker Compose:" "not available"
+            fi
         fi
     fi
 
@@ -331,6 +319,7 @@ main() {
 
     log ""
     log "Done."
+    log "Verify with: docker info && (docker compose version || docker-compose version)"
     log "If docker commands fail without sudo, log out and back in for group changes to apply."
 }
 

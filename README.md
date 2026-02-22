@@ -81,6 +81,7 @@ Notes:
 - Script is tuned for Amazon Linux (`dnf`/`rpm`).
 - After Docker group changes, log out and back in.
 - Docker Compose package names may vary by AMI; the script falls back automatically if `docker-compose-plugin` is unavailable.
+- Binary fallback installs Docker Compose as a Docker CLI plugin at `/usr/libexec/docker/cli-plugins/docker-compose`.
 
 ## Install Optional Dev Utilities (EC2)
 
