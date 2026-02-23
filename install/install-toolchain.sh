@@ -73,9 +73,15 @@ install_pkg() {
 
 install_base_packages() {
     local pkg
-    for pkg in git docker maven nodejs npm htop tree curl tar; do
+    for pkg in git docker maven nodejs npm htop tree tar; do
         install_pkg "${pkg}"
     done
+
+    # Amazon Linux commonly ships curl-minimal by default. Installing curl can
+    # conflict with curl-minimal, so only install a curl provider if missing.
+    if ! command -v curl >/dev/null 2>&1; then
+        install_pkg_dnf curl-minimal || install_pkg_dnf curl || warn "Could not install curl provider"
+    fi
 }
 
 docker_compose_available() {
