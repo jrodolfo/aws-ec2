@@ -187,6 +187,24 @@ install_github_cli() {
     run_root dnf install -y gh
 }
 
+install_codex_cli() {
+    if command -v codex >/dev/null 2>&1; then
+        log "Already installed: codex"
+        return 0
+    fi
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        run_root npm install -g @openai/codex
+        return 0
+    fi
+
+    run_root npm install -g @openai/codex >/dev/null 2>&1 || {
+        err "Failed to install codex CLI with npm."
+        err "Try manually: sudo npm install -g @openai/codex"
+        return 1
+    }
+}
+
 configure_docker() {
     run_root systemctl enable --now docker
 
@@ -311,6 +329,7 @@ verify_installation() {
 
     print_version_if_available "Git" git --version
     print_version_if_available "GitHub CLI" gh --version
+    print_version_if_available "Codex CLI" codex --version
     print_version_if_available "Java" java -version
     print_version_if_available "Javac" javac -version
     print_version_if_available "Maven" mvn -version
@@ -338,6 +357,7 @@ main() {
     fi
     install_base_packages
     install_github_cli
+    install_codex_cli
     configure_docker
     install_java
     verify_installation

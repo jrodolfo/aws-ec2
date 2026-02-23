@@ -190,12 +190,23 @@ install_pipx() {
 
     warn "pipx package unavailable; trying python user install."
     if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would ensure python3 pip is available"
         log "[dry-run] Would run python3 -m pip install --user pipx"
         ensure_local_bin_path
         return 0
     fi
 
     require_cmd python3
+    if ! python3 -m pip --version >/dev/null 2>&1; then
+        if try_install_pkg python3-pip; then
+            log "Installed: python3-pip"
+        else
+            err "python3 pip is not available and could not be installed (python3-pip)."
+            return 1
+        fi
+    fi
+
+    run_as_login_user python3 -m pip install --user --upgrade pip >/dev/null 2>&1 || true
     run_as_login_user python3 -m pip install --user pipx >/dev/null 2>&1 || {
         err "python3 -m pip install --user pipx failed."
         return 1

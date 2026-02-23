@@ -65,7 +65,7 @@ For complete SSH setup and troubleshooting instructions, see:
 
 Default behavior:
 - updates OS packages (`dnf update -y`)
-- installs: Docker, Docker Compose, Git, GitHub CLI, Java, Node/NPM, curl
+- installs: Docker, Docker Compose, Git, GitHub CLI, Codex CLI, Java, Node/NPM, curl
 - enables and starts Docker service
 - adds the selected user to the `docker` group
 
