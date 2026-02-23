@@ -1,8 +1,8 @@
 SHELL := /usr/bin/env bash
 
-SHELL_SCRIPTS := bootstrap.sh install/lib/common.sh install/install-toolchain.sh install/install-dev-utils.sh $(wildcard ops/*)
+SHELL_SCRIPTS := bootstrap.sh install/lib/common.sh install/install-toolchain.sh install/install-dev-utils.sh install/install-extras.sh $(wildcard ops/*)
 
-.PHONY: help bootstrap dry-run force install-toolchain install-toolchain-dry-run install-dev-utils install-dev-utils-dry-run lint-shell test-shell
+.PHONY: help bootstrap dry-run force install-toolchain install-toolchain-dry-run install-dev-utils install-dev-utils-dry-run install-extras install-extras-dry-run lint-shell test-shell
 
 help:
 	@echo "Targets:"
@@ -11,8 +11,10 @@ help:
 	@echo "  make force       Reinstall all managed files"
 	@echo "  make install-toolchain          Install base machine toolchain"
 	@echo "  make install-toolchain-dry-run  Preview toolchain installation"
-	@echo "  make install-dev-utils          Install optional EC2 dev utilities"
-	@echo "  make install-dev-utils-dry-run  Preview optional EC2 dev utility installation"
+	@echo "  make install-dev-utils          Install minimal EC2 dev utilities"
+	@echo "  make install-dev-utils-dry-run  Preview minimal EC2 dev utility installation"
+	@echo "  make install-extras             Install optional EC2 extras"
+	@echo "  make install-extras-dry-run     Preview optional EC2 extras installation"
 	@echo "  make lint-shell  Lint shell scripts with shellcheck"
 	@echo "  make test-shell  Run bats shell tests"
 
@@ -36,6 +38,12 @@ install-dev-utils:
 
 install-dev-utils-dry-run:
 	./install/install-dev-utils.sh --dry-run
+
+install-extras:
+	./install/install-extras.sh
+
+install-extras-dry-run:
+	./install/install-extras.sh --dry-run
 
 lint-shell:
 	@if command -v shellcheck >/dev/null 2>&1; then \

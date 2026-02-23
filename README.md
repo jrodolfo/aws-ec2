@@ -29,6 +29,8 @@ make install-toolchain-dry-run
 make install-toolchain
 make install-dev-utils-dry-run
 make install-dev-utils
+make install-extras-dry-run
+make install-extras
 make bootstrap
 ```
 
@@ -63,7 +65,7 @@ For complete SSH setup and troubleshooting instructions, see:
 
 Default behavior:
 - updates OS packages (`dnf update -y`)
-- installs: Docker, Docker Compose plugin, Git, GitHub CLI, Java, Maven, Node/NPM, htop, tree
+- installs: Docker, Docker Compose, Git, GitHub CLI, Java, Node/NPM, curl
 - enables and starts Docker service
 - adds the selected user to the `docker` group
 
@@ -83,20 +85,38 @@ Notes:
 - Docker Compose package names may vary by AMI; the script falls back automatically if `docker-compose-plugin` is unavailable.
 - Binary fallback installs Docker Compose as a Docker CLI plugin at `/usr/libexec/docker/cli-plugins/docker-compose`.
 
-## Install Optional Dev Utilities (EC2)
+## Install Minimal Dev Utilities (EC2)
 
 ```bash
 ./install/install-dev-utils.sh
 ```
 
-Installs optional utilities useful for terminal workflows on EC2:
+Installs only the minimal extra tools used by this setup:
+- `ripgrep` (`rg`)
+- `pipx`
+
+Fallback behavior:
+- If `ripgrep` is unavailable in enabled repos, script installs it via `cargo`.
+- Script updates `~/.bashrc` so `~/.cargo/bin` and `~/.local/bin` are in `PATH` when needed.
+
+Useful options:
+
+```bash
+./install/install-dev-utils.sh --dry-run
+./install/install-dev-utils.sh --no-update
+```
+
+## Install Optional Extras (EC2)
+
+If you want additional utilities (not required for the base setup), run:
+
+```bash
+./install/install-extras.sh
+```
+
+This includes tools such as:
 - `shellcheck`
 - `shfmt`
-- `jq`
-- `yq`
-- `ripgrep` (`rg`)
-- `fd`/`fdfind`
-- `gh`
 - `pre-commit`
 - `yamllint`
 - `actionlint`
@@ -107,21 +127,12 @@ Installs optional utilities useful for terminal workflows on EC2:
 - `just`
 - `tokei`
 - `hyperfine`
-- `watch` (installed only if missing)
-
-`act` is intentionally excluded (recommended for local dev machines, not server hosts).
-`gnu-sed` and `coreutils` are also not needed on EC2 (Amazon Linux already provides GNU tools).
-When packages are missing from enabled repos, the script uses fallbacks:
-- `cargo` fallback for Rust-based tools (for example `ripgrep`, `fd`, `delta`, `zoxide`, `just`, `tokei`, `hyperfine`)
-- `pipx` fallback for Python CLI tools (for example `pre-commit`, `yamllint`)
-
-The script enforces required tools (`rg`, `jq`, `yq`, `gh`, `actionlint`) and reports missing optional tools separately.
 
 Useful options:
 
 ```bash
-./install/install-dev-utils.sh --dry-run
-./install/install-dev-utils.sh --no-update
+./install/install-extras.sh --dry-run
+./install/install-extras.sh --no-update
 ```
 
 ## Bootstrap on a New Machine
@@ -178,6 +189,8 @@ make install-toolchain
 make install-toolchain-dry-run
 make install-dev-utils
 make install-dev-utils-dry-run
+make install-extras
+make install-extras-dry-run
 make lint-shell
 make test-shell
 ```
@@ -200,6 +213,7 @@ aws-ec2/
 │   ├── lib/
 │   │   └── common.sh
 │   ├── install-dev-utils.sh
+│   ├── install-extras.sh
 │   └── install-toolchain.sh
 ├── dotfiles/
 │   ├── .bashrc

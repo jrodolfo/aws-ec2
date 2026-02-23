@@ -74,7 +74,7 @@ install_pkg() {
 
 install_base_packages() {
     local pkg
-    for pkg in git docker maven nodejs npm htop tree tar; do
+    for pkg in git docker nodejs npm tar; do
         install_pkg "${pkg}"
     done
 
