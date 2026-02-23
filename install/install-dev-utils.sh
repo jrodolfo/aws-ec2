@@ -50,6 +50,91 @@ install_pkg_if_present() {
     install_pkg_dnf "${pkg}"
 }
 
+target_user_home() {
+    local home_dir=""
+    if command -v getent >/dev/null 2>&1; then
+        home_dir="$(getent passwd "${SUDO_USER:-${USER}}" 2>/dev/null | awk -F: '{print $6}')"
+    fi
+    if [[ -z "${home_dir}" ]]; then
+        if [[ -n "${SUDO_USER:-}" ]]; then
+            home_dir="/home/${SUDO_USER}"
+        else
+            home_dir="${HOME}"
+        fi
+    fi
+    printf '%s\n' "${home_dir}"
+}
+
+ensure_cargo_bin_in_bashrc() {
+    local user_home="$1"
+    local bashrc_path="${user_home}/.bashrc"
+    # shellcheck disable=SC2016
+    local line='export PATH="$HOME/.cargo/bin:$PATH"'
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        if [[ -f "${bashrc_path}" ]] && grep -Fq "${line}" "${bashrc_path}"; then
+            log "Cargo PATH already present in ${bashrc_path}"
+        else
+            log "[dry-run] Would add cargo PATH to ${bashrc_path}"
+        fi
+        return 0
+    fi
+
+    if [[ ! -f "${bashrc_path}" ]]; then
+        touch "${bashrc_path}"
+    fi
+
+    if ! grep -Fq "${line}" "${bashrc_path}"; then
+        printf '\n%s\n' "${line}" >> "${bashrc_path}"
+        log "Added cargo PATH to ${bashrc_path}"
+    else
+        log "Cargo PATH already present in ${bashrc_path}"
+    fi
+}
+
+install_ripgrep() {
+    if command -v rg >/dev/null 2>&1; then
+        log "Already installed: ripgrep"
+        return 0
+    fi
+
+    if install_pkg_if_present ripgrep && command -v rg >/dev/null 2>&1; then
+        log "ripgrep installed from package repository"
+        return 0
+    fi
+
+    warn "ripgrep package unavailable; trying cargo fallback."
+    if install_pkg_if_present cargo; then
+        local user_home cargo_home cargo_rg
+        user_home="$(target_user_home)"
+        cargo_home="${user_home}/.cargo"
+        cargo_rg="${cargo_home}/bin/rg"
+
+        if [[ -x "${cargo_rg}" ]]; then
+            log "ripgrep already present at ${cargo_rg}"
+        else
+            if [[ "${DRY_RUN}" -eq 1 ]]; then
+                log "[dry-run] Would run cargo install ripgrep"
+            else
+                # Install ripgrep for the login user so binaries land in that user's ~/.cargo/bin.
+                if [[ "${EUID}" -eq 0 ]] && [[ -n "${SUDO_USER:-}" ]]; then
+                    run sudo -u "${SUDO_USER}" cargo install ripgrep
+                else
+                    run cargo install ripgrep
+                fi
+            fi
+        fi
+
+        ensure_cargo_bin_in_bashrc "${user_home}"
+        warn "If 'rg' is still not found in this shell, run: source ~/.bashrc"
+        return 0
+    fi
+
+    warn "Could not install cargo for ripgrep fallback."
+    warn "Manual fallback: https://github.com/BurntSushi/ripgrep/releases"
+    return 1
+}
+
 install_github_cli() {
     if command -v gh >/dev/null 2>&1; then
         log "Already installed: gh"
@@ -221,7 +306,7 @@ main() {
     install_pkg_if_present shfmt || warn "shfmt package not available"
     install_pkg_if_present jq || warn "jq package not available"
     install_pkg_if_present yq || warn "yq package not available"
-    install_pkg_if_present ripgrep || warn "ripgrep package not available"
+    install_ripgrep || warn "ripgrep could not be installed"
     install_pkg_if_present pre-commit || warn "pre-commit package not available"
     install_pkg_if_present yamllint || warn "yamllint package not available"
     install_fd

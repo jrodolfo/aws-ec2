@@ -111,6 +111,7 @@ Installs optional utilities useful for terminal workflows on EC2:
 
 `act` is intentionally excluded (recommended for local dev machines, not server hosts).
 `gnu-sed` and `coreutils` are also not needed on EC2 (Amazon Linux already provides GNU tools).
+If `ripgrep` is unavailable in enabled repos, the script falls back to installing via `cargo` and updates `~/.bashrc` with `~/.cargo/bin` in `PATH`.
 
 Useful options:
 
