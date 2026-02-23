@@ -7,6 +7,10 @@ source "${SCRIPT_DIR}/lib/common.sh"
 
 DRY_RUN=0
 SKIP_UPDATE=0
+MISSING_REQUIRED=()
+MISSING_OPTIONAL=()
+REQUIRED_TOOLS=(rg jq yq gh actionlint)
+OPTIONAL_TOOLS=(shellcheck shfmt pre-commit yamllint bats delta fzf zoxide just tokei hyperfine watch fd)
 
 usage() {
     cat <<'EOF'
@@ -45,37 +49,48 @@ parse_args() {
     done
 }
 
-install_pkg_if_present() {
-    local pkg="$1"
-    install_pkg_dnf "${pkg}"
+target_user_name() {
+    printf '%s\n' "${SUDO_USER:-${USER}}"
 }
 
 target_user_home() {
-    local home_dir=""
+    local user_name home_dir
+    user_name="$(target_user_name)"
+    home_dir=""
     if command -v getent >/dev/null 2>&1; then
-        home_dir="$(getent passwd "${SUDO_USER:-${USER}}" 2>/dev/null | awk -F: '{print $6}')"
+        home_dir="$(getent passwd "${user_name}" 2>/dev/null | awk -F: '{print $6}')"
     fi
     if [[ -z "${home_dir}" ]]; then
-        if [[ -n "${SUDO_USER:-}" ]]; then
-            home_dir="/home/${SUDO_USER}"
-        else
-            home_dir="${HOME}"
-        fi
+        home_dir="${HOME}"
     fi
     printf '%s\n' "${home_dir}"
 }
 
-ensure_cargo_bin_in_bashrc() {
+run_as_login_user() {
+    if [[ "${EUID}" -eq 0 ]] && [[ -n "${SUDO_USER:-}" ]]; then
+        sudo -u "${SUDO_USER}" -H "$@"
+    else
+        "$@"
+    fi
+}
+
+add_path_now() {
+    local path_dir="$1"
+    if [[ ":${PATH}:" != *":${path_dir}:"* ]]; then
+        export PATH="${path_dir}:${PATH}"
+    fi
+}
+
+ensure_export_in_bashrc() {
     local user_home="$1"
+    local export_line="$2"
     local bashrc_path="${user_home}/.bashrc"
-    # shellcheck disable=SC2016
-    local line='export PATH="$HOME/.cargo/bin:$PATH"'
 
     if [[ "${DRY_RUN}" -eq 1 ]]; then
-        if [[ -f "${bashrc_path}" ]] && grep -Fq "${line}" "${bashrc_path}"; then
-            log "Cargo PATH already present in ${bashrc_path}"
+        if [[ -f "${bashrc_path}" ]] && grep -Fq "${export_line}" "${bashrc_path}"; then
+            log "Already present in ${bashrc_path}: ${export_line}"
         else
-            log "[dry-run] Would add cargo PATH to ${bashrc_path}"
+            log "[dry-run] Would add to ${bashrc_path}: ${export_line}"
         fi
         return 0
     fi
@@ -84,12 +99,110 @@ ensure_cargo_bin_in_bashrc() {
         touch "${bashrc_path}"
     fi
 
-    if ! grep -Fq "${line}" "${bashrc_path}"; then
-        printf '\n%s\n' "${line}" >> "${bashrc_path}"
-        log "Added cargo PATH to ${bashrc_path}"
+    if ! grep -Fq "${export_line}" "${bashrc_path}"; then
+        printf '\n%s\n' "${export_line}" >> "${bashrc_path}"
+        log "Added to ${bashrc_path}: ${export_line}"
     else
-        log "Cargo PATH already present in ${bashrc_path}"
+        log "Already present in ${bashrc_path}: ${export_line}"
     fi
+}
+
+ensure_cargo_path() {
+    local user_home cargo_bin
+    user_home="$(target_user_home)"
+    cargo_bin="${user_home}/.cargo/bin"
+    # shellcheck disable=SC2016
+    ensure_export_in_bashrc "${user_home}" 'export PATH="$HOME/.cargo/bin:$PATH"'
+    add_path_now "${cargo_bin}"
+}
+
+ensure_local_bin_path() {
+    local user_home local_bin
+    user_home="$(target_user_home)"
+    local_bin="${user_home}/.local/bin"
+    # shellcheck disable=SC2016
+    ensure_export_in_bashrc "${user_home}" 'export PATH="$HOME/.local/bin:$PATH"'
+    add_path_now "${local_bin}"
+}
+
+try_install_pkg() {
+    local pkg="$1"
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        run_root dnf install -y "${pkg}"
+        return 0
+    fi
+
+    if is_pkg_installed_rpm "${pkg}"; then
+        log "Already installed: ${pkg}"
+        return 0
+    fi
+
+    if run_root dnf install -y "${pkg}" >/dev/null 2>&1; then
+        log "Installed: ${pkg}"
+        return 0
+    fi
+
+    return 1
+}
+
+cargo_install_tool() {
+    local crate="$1"
+    local bin="$2"
+
+    if command -v "${bin}" >/dev/null 2>&1; then
+        log "Already installed: ${bin}"
+        return 0
+    fi
+
+    if ! try_install_pkg cargo; then
+        return 1
+    fi
+
+    ensure_cargo_path
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would run cargo install ${crate}"
+        return 0
+    fi
+
+    run_as_login_user cargo install "${crate}" >/dev/null 2>&1 || return 1
+    ensure_cargo_path
+    command -v "${bin}" >/dev/null 2>&1 || [[ -x "$(target_user_home)/.cargo/bin/${bin}" ]]
+}
+
+install_python_tool_with_pipx() {
+    local package="$1"
+    local bin="$2"
+
+    if command -v "${bin}" >/dev/null 2>&1; then
+        log "Already installed: ${bin}"
+        return 0
+    fi
+
+    if ! command -v pipx >/dev/null 2>&1; then
+        if ! try_install_pkg pipx; then
+            if [[ "${DRY_RUN}" -eq 1 ]]; then
+                log "[dry-run] Would run python3 -m pip install --user pipx"
+            else
+                require_cmd python3
+                run_as_login_user python3 -m pip install --user pipx >/dev/null 2>&1 || return 1
+            fi
+        fi
+    fi
+
+    ensure_local_bin_path
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would run pipx install ${package}"
+        return 0
+    fi
+
+    if run_as_login_user pipx list --short 2>/dev/null | grep -Fxq "${package}"; then
+        log "Already installed via pipx: ${package}"
+        return 0
+    fi
+
+    run_as_login_user pipx install "${package}" >/dev/null 2>&1 || return 1
+    ensure_local_bin_path
+    command -v "${bin}" >/dev/null 2>&1 || [[ -x "$(target_user_home)/.local/bin/${bin}" ]]
 }
 
 install_ripgrep() {
@@ -98,39 +211,19 @@ install_ripgrep() {
         return 0
     fi
 
-    if install_pkg_if_present ripgrep && command -v rg >/dev/null 2>&1; then
+    if try_install_pkg ripgrep && command -v rg >/dev/null 2>&1; then
         log "ripgrep installed from package repository"
         return 0
     fi
 
     warn "ripgrep package unavailable; trying cargo fallback."
-    if install_pkg_if_present cargo; then
-        local user_home cargo_home cargo_rg
-        user_home="$(target_user_home)"
-        cargo_home="${user_home}/.cargo"
-        cargo_rg="${cargo_home}/bin/rg"
-
-        if [[ -x "${cargo_rg}" ]]; then
-            log "ripgrep already present at ${cargo_rg}"
-        else
-            if [[ "${DRY_RUN}" -eq 1 ]]; then
-                log "[dry-run] Would run cargo install ripgrep"
-            else
-                # Install ripgrep for the login user so binaries land in that user's ~/.cargo/bin.
-                if [[ "${EUID}" -eq 0 ]] && [[ -n "${SUDO_USER:-}" ]]; then
-                    run sudo -u "${SUDO_USER}" cargo install ripgrep
-                else
-                    run cargo install ripgrep
-                fi
-            fi
-        fi
-
-        ensure_cargo_bin_in_bashrc "${user_home}"
+    if cargo_install_tool ripgrep rg; then
+        log "ripgrep installed via cargo fallback"
         warn "If 'rg' is still not found in this shell, run: source ~/.bashrc"
         return 0
     fi
 
-    warn "Could not install cargo for ripgrep fallback."
+    warn "Could not install ripgrep via cargo fallback."
     warn "Manual fallback: https://github.com/BurntSushi/ripgrep/releases"
     return 1
 }
@@ -141,7 +234,7 @@ install_github_cli() {
         return 0
     fi
 
-    if install_pkg_if_present gh; then
+    if try_install_pkg gh; then
         return 0
     fi
 
@@ -159,15 +252,12 @@ install_fd() {
         return 0
     fi
 
-    if install_pkg_if_present fd-find; then
+    if try_install_pkg fd-find || try_install_pkg fd; then
         return 0
     fi
 
-    if install_pkg_if_present fd; then
-        return 0
-    fi
-
-    warn "Could not install fd (fd-find/fd package unavailable)."
+    warn "fd package unavailable; trying cargo fallback."
+    cargo_install_tool fd-find fd || warn "Could not install fd via package or cargo fallback."
 }
 
 install_watch_if_missing() {
@@ -175,17 +265,16 @@ install_watch_if_missing() {
         log "Already installed: watch"
         return 0
     fi
-
-    install_pkg_if_present procps-ng || install_pkg_if_present watch || warn "Could not install watch"
+    try_install_pkg procps-ng || try_install_pkg watch || warn "Could not install watch"
 }
 
 install_productivity_tools() {
-    install_pkg_if_present git-delta || warn "git-delta package not available"
-    install_pkg_if_present fzf || warn "fzf package not available"
-    install_pkg_if_present zoxide || warn "zoxide package not available"
-    install_pkg_if_present just || warn "just package not available"
-    install_pkg_if_present tokei || warn "tokei package not available"
-    install_pkg_if_present hyperfine || warn "hyperfine package not available"
+    try_install_pkg git-delta || cargo_install_tool git-delta delta || warn "git-delta unavailable"
+    try_install_pkg fzf || warn "fzf package unavailable"
+    try_install_pkg zoxide || cargo_install_tool zoxide zoxide || warn "zoxide unavailable"
+    try_install_pkg just || cargo_install_tool just just || warn "just unavailable"
+    try_install_pkg tokei || cargo_install_tool tokei tokei || warn "tokei unavailable"
+    try_install_pkg hyperfine || cargo_install_tool hyperfine hyperfine || warn "hyperfine unavailable"
     install_watch_if_missing
 }
 
@@ -195,15 +284,7 @@ install_bats() {
         return 0
     fi
 
-    if install_pkg_if_present bats; then
-        return 0
-    fi
-
-    if install_pkg_if_present bats-core; then
-        return 0
-    fi
-
-    warn "Could not install bats (bats/bats-core package unavailable)."
+    try_install_pkg bats || try_install_pkg bats-core || warn "Could not install bats (bats/bats-core unavailable)"
 }
 
 install_actionlint() {
@@ -212,7 +293,7 @@ install_actionlint() {
         return 0
     fi
 
-    if install_pkg_if_present actionlint; then
+    if try_install_pkg actionlint; then
         return 0
     fi
 
@@ -234,7 +315,6 @@ install_actionlint() {
     require_cmd curl
     require_cmd tar
     url="https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_${arch}.tar.gz"
-
     run rm -rf "${tmp_dir}"
     run mkdir -p "${tmp_dir}"
     run curl -fsSL -o "${tarball}" "${url}"
@@ -251,6 +331,30 @@ print_version_if_available() {
     else
         printf '%-16s %s\n' "${label}:" "not found"
     fi
+}
+
+tool_exists() {
+    local tool="$1"
+    case "${tool}" in
+        fd)
+            command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1
+            ;;
+        *)
+            command -v "${tool}" >/dev/null 2>&1
+            ;;
+    esac
+}
+
+collect_missing_tools() {
+    local tool
+    MISSING_REQUIRED=()
+    MISSING_OPTIONAL=()
+    for tool in "${REQUIRED_TOOLS[@]}"; do
+        tool_exists "${tool}" || MISSING_REQUIRED+=("${tool}")
+    done
+    for tool in "${OPTIONAL_TOOLS[@]}"; do
+        tool_exists "${tool}" || MISSING_OPTIONAL+=("${tool}")
+    done
 }
 
 verify_installation() {
@@ -285,6 +389,23 @@ verify_installation() {
     print_version_if_available "GitHub CLI" gh --version
 }
 
+print_summary() {
+    collect_missing_tools
+    log ""
+    log "Summary:"
+    if [[ ${#MISSING_REQUIRED[@]} -eq 0 ]]; then
+        log "  Required tools: ok"
+    else
+        warn "Required tools missing: ${MISSING_REQUIRED[*]}"
+    fi
+
+    if [[ ${#MISSING_OPTIONAL[@]} -eq 0 ]]; then
+        log "  Optional tools: all installed"
+    else
+        warn "Optional tools missing: ${MISSING_OPTIONAL[*]}"
+    fi
+}
+
 main() {
     parse_args "$@"
     validate_os_amzn
@@ -302,13 +423,13 @@ main() {
         run_root dnf update -y
     fi
 
-    install_pkg_if_present shellcheck || warn "shellcheck package not available"
-    install_pkg_if_present shfmt || warn "shfmt package not available"
-    install_pkg_if_present jq || warn "jq package not available"
-    install_pkg_if_present yq || warn "yq package not available"
+    try_install_pkg shellcheck || warn "shellcheck package not available"
+    try_install_pkg shfmt || warn "shfmt package not available"
+    try_install_pkg jq || warn "jq package not available"
+    try_install_pkg yq || warn "yq package not available"
     install_ripgrep || warn "ripgrep could not be installed"
-    install_pkg_if_present pre-commit || warn "pre-commit package not available"
-    install_pkg_if_present yamllint || warn "yamllint package not available"
+    try_install_pkg pre-commit || install_python_tool_with_pipx pre-commit pre-commit || warn "pre-commit unavailable"
+    try_install_pkg yamllint || install_python_tool_with_pipx yamllint yamllint || warn "yamllint unavailable"
     install_fd
     install_productivity_tools
     install_bats
@@ -316,7 +437,12 @@ main() {
     install_github_cli
 
     verify_installation
+    print_summary
     log ""
+    if [[ "${DRY_RUN}" -eq 0 ]] && [[ ${#MISSING_REQUIRED[@]} -gt 0 ]]; then
+        err "One or more required tools are missing."
+        exit 1
+    fi
     log "Done."
 }
 
