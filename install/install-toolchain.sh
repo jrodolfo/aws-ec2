@@ -8,6 +8,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 TARGET_USER="${SUDO_USER:-${USER:-ec2-user}}"
 JAVA_MODE="distro"
 DRY_RUN=0
+DOCKER_COMPOSE_INSTALL_METHOD="unknown"
 
 usage() {
     cat <<'EOF'
@@ -123,18 +124,33 @@ install_docker_compose_binary() {
 install_docker_compose() {
     if docker_compose_available; then
         log "Docker Compose already available"
+        DOCKER_COMPOSE_INSTALL_METHOD="already-present"
         return 0
     fi
 
-    if install_pkg_dnf docker-compose-plugin && docker_compose_available; then
+    log "Trying Docker Compose via docker-compose-plugin package..."
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        install_pkg_dnf docker-compose-plugin || true
+    elif run_root dnf install -y docker-compose-plugin >/dev/null 2>&1; then
+        log "Installed: docker-compose-plugin"
+    fi
+    if docker_compose_available; then
         log "Docker Compose enabled via docker-compose-plugin package"
+        DOCKER_COMPOSE_INSTALL_METHOD="docker-compose-plugin"
         return 0
     fi
 
     warn "docker-compose-plugin package unavailable or did not activate docker compose."
 
-    if install_pkg_dnf docker-compose && docker_compose_available; then
+    log "Trying Docker Compose via docker-compose package..."
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        install_pkg_dnf docker-compose || true
+    elif run_root dnf install -y docker-compose >/dev/null 2>&1; then
+        log "Installed: docker-compose"
+    fi
+    if docker_compose_available; then
         log "Docker Compose enabled via docker-compose package"
+        DOCKER_COMPOSE_INSTALL_METHOD="docker-compose"
         return 0
     fi
 
@@ -145,6 +161,7 @@ install_docker_compose() {
     }
     if docker_compose_available || docker_compose_legacy_available; then
         log "Docker Compose enabled via binary fallback"
+        DOCKER_COMPOSE_INSTALL_METHOD="binary-fallback"
         return 0
     fi
 
@@ -279,11 +296,13 @@ verify_installation() {
         compose_version="$(docker compose version 2>/dev/null || true)"
         if [[ -n "${compose_version}" ]]; then
             printf '%-16s %s\n' "Docker Compose:" "${compose_version}"
+            printf '%-16s %s\n' "Compose method:" "${DOCKER_COMPOSE_INSTALL_METHOD}"
         else
             local legacy_compose_version
             legacy_compose_version="$(docker-compose version 2>/dev/null | head -n1 || true)"
             if [[ -n "${legacy_compose_version}" ]]; then
                 printf '%-16s %s\n' "Docker Compose:" "${legacy_compose_version} (legacy docker-compose)"
+                printf '%-16s %s\n' "Compose method:" "${DOCKER_COMPOSE_INSTALL_METHOD}"
             else
                 printf '%-16s %s\n' "Docker Compose:" "not available"
             fi
