@@ -65,9 +65,12 @@ For complete SSH setup and troubleshooting instructions, see:
 
 Default behavior:
 - updates OS packages (`dnf update -y`)
-- installs: Docker, Docker Compose, Git, GitHub CLI, Codex CLI, Java, Node/NPM, curl
+- installs: Docker, Docker Compose, Git, GitHub CLI, Codex CLI, Java, Node/NPM, curl, Python 3.11, yt-dlp
 - enables and starts Docker service
 - adds the selected user to the `docker` group
+- updates `~/.bashrc` with:
+  - `export PATH="$HOME/.local/bin:$PATH"`
+  - `alias python=python3.11`
 
 Useful options:
 
@@ -84,6 +87,18 @@ Notes:
 - After Docker group changes, log out and back in.
 - Docker Compose package names may vary by AMI; the script falls back automatically if `docker-compose-plugin` is unavailable.
 - Binary fallback installs Docker Compose as a Docker CLI plugin at `/usr/libexec/docker/cli-plugins/docker-compose`.
+
+## Python and yt-dlp Baseline (Amazon Linux 2023)
+
+`yt-dlp` requires Python 3.10+.
+This setup installs `yt-dlp` with Python 3.11 user-local packages to avoid runtime mismatches.
+
+```bash
+python3.11 --version
+~/.local/bin/yt-dlp --version
+```
+
+If `yt-dlp --version` fails after running the toolchain installer, stop and fix Python/`yt-dlp` before continuing bootstrap steps.
 
 ## Install Minimal Dev Utilities (EC2)
 

@@ -34,6 +34,8 @@ setup() {
   run "${REPO_ROOT}/install/install-toolchain.sh" --dry-run --no-update
   [ "$status" -eq 0 ]
   [[ "$output" == *"Dry run     : enabled"* ]]
+  [[ "$output" == *"python3.11"* ]]
+  [[ "$output" == *"alias python=python3.11"* ]]
 }
 
 @test "dev-utils help works" {

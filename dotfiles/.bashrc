@@ -48,6 +48,7 @@ alias ll='ls -lh'
 alias la='ls -lha'
 alias cls='clear'
 alias l.='ls -dl .*'
+alias python='python3.11'
 
 export PATH="$HOME/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"

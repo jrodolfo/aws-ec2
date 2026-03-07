@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 TARGET_USER="${SUDO_USER:-${USER:-ec2-user}}"
+TARGET_USER_HOME=""
 JAVA_MODE="distro"
 DRY_RUN=0
 DOCKER_COMPOSE_INSTALL_METHOD="unknown"
@@ -65,6 +66,52 @@ ensure_user_exists() {
         err "User does not exist: ${TARGET_USER}"
         exit 1
     fi
+}
+
+resolve_user_home() {
+    local user_name="$1"
+    local home_dir=""
+    if command -v getent >/dev/null 2>&1; then
+        home_dir="$(getent passwd "${user_name}" 2>/dev/null | awk -F: '{print $6}')"
+    fi
+    if [[ -z "${home_dir}" ]]; then
+        home_dir="${HOME}"
+    fi
+    printf '%s\n' "${home_dir}"
+}
+
+run_as_target_user() {
+    if [[ "${EUID}" -eq 0 ]]; then
+        run sudo -u "${TARGET_USER}" -H "$@"
+    else
+        run "$@"
+    fi
+}
+
+ensure_line_in_user_bashrc() {
+    local line="$1"
+    local bashrc_path="${TARGET_USER_HOME}/.bashrc"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        if [[ -f "${bashrc_path}" ]] && grep -Fq "${line}" "${bashrc_path}"; then
+            log "Already present in ${bashrc_path}: ${line}"
+        else
+            log "[dry-run] Would add to ${bashrc_path}: ${line}"
+        fi
+        return 0
+    fi
+
+    if [[ ! -f "${bashrc_path}" ]]; then
+        run_as_target_user touch "${bashrc_path}"
+    fi
+
+    if grep -Fq "${line}" "${bashrc_path}"; then
+        log "Already present in ${bashrc_path}: ${line}"
+        return 0
+    fi
+
+    run_as_target_user bash -lc "printf '\n%s\n' '${line}' >> '${bashrc_path}'"
+    log "Added to ${bashrc_path}: ${line}"
 }
 
 install_pkg() {
@@ -294,6 +341,19 @@ install_java() {
     esac
 }
 
+install_python_ytdlp() {
+    install_pkg python3.11
+    install_pkg python3.11-pip
+
+    run_as_target_user mkdir -p "${TARGET_USER_HOME}/.local/bin"
+    run_as_target_user python3.11 -m pip install --user --upgrade pip setuptools wheel
+    run_as_target_user python3.11 -m pip install --user --upgrade --force-reinstall yt-dlp
+
+    # shellcheck disable=SC2016
+    ensure_line_in_user_bashrc 'export PATH="$HOME/.local/bin:$PATH"'
+    ensure_line_in_user_bashrc 'alias python=python3.11'
+}
+
 print_version_if_available() {
     local label="$1"
     shift
@@ -335,12 +395,21 @@ verify_installation() {
     print_version_if_available "Maven" mvn -version
     print_version_if_available "Node" node -v
     print_version_if_available "NPM" npm -v
+    print_version_if_available "Python 3.11" python3.11 --version
+
+    local ytdlp_bin="${TARGET_USER_HOME}/.local/bin/yt-dlp"
+    if [[ -x "${ytdlp_bin}" ]]; then
+        printf '%-16s %s\n' "yt-dlp:" "$("${ytdlp_bin}" --version 2>/dev/null | head -n1)"
+    else
+        printf '%-16s %s\n' "yt-dlp:" "not found"
+    fi
 }
 
 main() {
     parse_args "$@"
     validate_os_amzn
     ensure_user_exists
+    TARGET_USER_HOME="$(resolve_user_home "${TARGET_USER}")"
     if [[ "${DRY_RUN}" -eq 0 ]]; then
         require_cmd dnf
         require_cmd rpm
@@ -360,6 +429,7 @@ main() {
     install_codex_cli
     configure_docker
     install_java
+    install_python_ytdlp
     verify_installation
 
     log ""
