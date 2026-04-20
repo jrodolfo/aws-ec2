@@ -1,11 +1,39 @@
 # aws-ec2
 
+[![Shell Lint](https://github.com/jrodolfo/aws-ec2/actions/workflows/shell-lint.yml/badge.svg)](https://github.com/jrodolfo/aws-ec2/actions/workflows/shell-lint.yml)
+[![Script Smoke](https://github.com/jrodolfo/aws-ec2/actions/workflows/bootstrap-dry-run.yml/badge.svg)](https://github.com/jrodolfo/aws-ec2/actions/workflows/bootstrap-dry-run.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 Reusable server setup repository for provisioning a fresh Linux EC2 instance with personal dotfiles and utility scripts.
+
+## Project Structure
+
+```text
+aws-ec2/
+├── install/
+│   ├── lib/
+│   │   └── common.sh
+│   ├── install-dev-utils.sh
+│   ├── install-extras.sh
+│   └── install-toolchain.sh
+├── dotfiles/
+│   ├── .bashrc
+│   ├── .bash_profile
+│   ├── .vimrc
+│   └── .gitconfig
+├── ops/
+│   ├── ec2info
+│   ├── linuxinfo
+│   └── showip
+├── tests/
+│   └── scripts.bats
+└── bootstrap.sh
+```
 
 ## Who This Is For
 
 - Use as-is: run this repo directly to apply the author's EC2 setup.
-- Customize: fork/edit `dotfiles/` and `ops/` to apply your own setup.
+- Customize: fork and edit `dotfiles/` and `ops/` to apply your own setup.
 
 ## Fresh EC2 Minimum Sequence
 
@@ -21,7 +49,7 @@ cd aws-ec2
 ./bootstrap.sh
 ```
 
-Optional (if you prefer Make targets):
+Optional, if you prefer Make targets:
 
 ```bash
 sudo dnf install -y make
@@ -54,8 +82,7 @@ If you want your own configuration:
 
 ## SSH Access
 
-For complete SSH setup and troubleshooting instructions, see:
-- [`doc/ssh/NOTES.md`](doc/ssh/NOTES.md)
+For complete SSH setup and troubleshooting instructions, see [`doc/ssh/NOTES.md`](doc/ssh/NOTES.md).
 
 ## Install Base Toolchain (EC2)
 
@@ -64,13 +91,11 @@ For complete SSH setup and troubleshooting instructions, see:
 ```
 
 Default behavior:
-- updates OS packages (`dnf update -y`)
-- installs: Docker, Docker Compose, Git, GitHub CLI, Codex CLI, Java, Node/NPM, curl, Python 3.11, yt-dlp
+- updates OS packages with `dnf update -y`
+- installs Docker, Docker Compose, Git, GitHub CLI, Codex CLI, Java, Node/NPM, `curl`, Python 3.11, and `yt-dlp`
 - enables and starts Docker service
 - adds the selected user to the `docker` group
-- updates `~/.bashrc` with:
-  - `export PATH="$HOME/.local/bin:$PATH"`
-  - `alias python=python3.11`
+- updates `~/.bashrc` with `export PATH="$HOME/.local/bin:$PATH"` and `alias python=python3.11`
 
 Useful options:
 
@@ -83,7 +108,7 @@ Useful options:
 ```
 
 Notes:
-- Script is tuned for Amazon Linux (`dnf`/`rpm`).
+- Script is tuned for Amazon Linux with `dnf` and `rpm`.
 - After Docker group changes, log out and back in.
 - Docker Compose package names may vary by AMI; the script falls back automatically if `docker-compose-plugin` is unavailable.
 - Binary fallback installs Docker Compose as a Docker CLI plugin at `/usr/libexec/docker/cli-plugins/docker-compose`.
@@ -98,7 +123,7 @@ python3.11 --version
 ~/.local/bin/yt-dlp --version
 ```
 
-If `yt-dlp --version` fails after running the toolchain installer, stop and fix Python/`yt-dlp` before continuing bootstrap steps.
+If `yt-dlp --version` fails after running the toolchain installer, stop and fix Python and `yt-dlp` before continuing bootstrap steps.
 
 ## Install Minimal Dev Utilities (EC2)
 
@@ -111,8 +136,8 @@ Installs only the minimal extra tools used by this setup:
 - `pipx`
 
 Fallback behavior:
-- If `ripgrep` is unavailable in enabled repos, script installs it via `cargo`.
-- Script updates `~/.bashrc` so `~/.cargo/bin` and `~/.local/bin` are in `PATH` when needed.
+- If `ripgrep` is unavailable in enabled repos, the script installs it via `cargo`.
+- The script updates `~/.bashrc` so `~/.cargo/bin` and `~/.local/bin` are in `PATH` when needed.
 
 Useful options:
 
@@ -123,7 +148,7 @@ Useful options:
 
 ## Install Optional Extras (EC2)
 
-If you want additional utilities (not required for the base setup), run:
+If you want additional utilities that are not required for the base setup, run:
 
 ```bash
 ./install/install-extras.sh
@@ -170,7 +195,7 @@ What it does:
 
 ## Pull Files from an Existing EC2 Host
 
-Use your PEM key and correct SSH username for the AMI:
+Use your PEM key and the correct SSH username for the AMI:
 
 ```bash
 scp -i ~/.ssh/<key>.pem ec2-user@<public-ip>:~/.bashrc dotfiles/
@@ -220,26 +245,14 @@ GitHub Actions runs shell checks and smoke tests on every push and pull request:
 - `./install/install-dev-utils.sh --dry-run --no-update`
 - `make test-shell`
 
-## Repository Layout
+## Contact
 
-```text
-aws-ec2/
-├── install/
-│   ├── lib/
-│   │   └── common.sh
-│   ├── install-dev-utils.sh
-│   ├── install-extras.sh
-│   └── install-toolchain.sh
-├── dotfiles/
-│   ├── .bashrc
-│   ├── .bash_profile
-│   ├── .vimrc
-│   └── .gitconfig
-├── ops/
-│   ├── ec2info
-│   ├── linuxinfo
-│   └── showip
-├── tests/
-│   └── scripts.bats
-└── bootstrap.sh
-```
+- Software Developer: Rod Oliveira
+- GitHub: https://github.com/jrodolfo
+- Webpage: https://jrodolfo.net
+
+## License
+
+- MIT License
+- Copyright (c) 2026 Rod Oliveira
+- See [LICENSE](./LICENSE)
