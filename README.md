@@ -2,6 +2,11 @@
 
 [![Shell Lint](https://github.com/jrodolfo/aws-ec2/actions/workflows/shell-lint.yml/badge.svg)](https://github.com/jrodolfo/aws-ec2/actions/workflows/shell-lint.yml)
 [![Script Smoke](https://github.com/jrodolfo/aws-ec2/actions/workflows/bootstrap-dry-run.yml/badge.svg)](https://github.com/jrodolfo/aws-ec2/actions/workflows/bootstrap-dry-run.yml)
+[![Bash](https://img.shields.io/badge/Shell-Bash-121011?logo=gnu-bash)](https://www.gnu.org/software/bash/)
+[![ShellCheck](https://img.shields.io/badge/Lint-ShellCheck-89e051)](https://www.shellcheck.net/)
+[![Tests](https://img.shields.io/badge/Tests-Bats-15aeef)](https://bats-core.readthedocs.io/)
+[![AWS EC2](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/ec2/)
+[![Amazon Linux](https://img.shields.io/badge/Platform-Amazon%20Linux-232F3E?logo=amazonaws&logoColor=white)](https://aws.amazon.com/amazon-linux-2/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 Reusable server setup repository for provisioning a fresh Linux EC2 instance with personal dotfiles and utility scripts.
