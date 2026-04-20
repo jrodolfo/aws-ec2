@@ -27,6 +27,8 @@ aws-ec2/
 │   ├── .vimrc
 │   └── .gitconfig
 ├── ops/
+│   ├── check-memory
+│   ├── check-updates
 │   ├── ec2info
 │   ├── linuxinfo
 │   └── showip
@@ -197,6 +199,13 @@ What it does:
 - installs dotfiles to `$HOME`
 - installs EC2 helper scripts from `ops/` to `$HOME/.local/bin`
 - preserves replaced files in `~/.bootstrap-backups/<timestamp>/`
+
+Useful `ops/` helpers after bootstrap:
+- `check-memory --top 10` shows a memory snapshot and top memory-consuming processes
+- `check-updates` checks for Amazon Linux release updates on `dnf`-based systems
+- `ec2info` prints EC2 instance and Linux summary details
+- `linuxinfo` prints a local Linux system snapshot
+- `showip` prints the current public IP
 
 ## Pull Files from an Existing EC2 Host
 

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TOP_N=5
+
+usage() {
+    cat <<'EOF'
+Usage: check-memory [--top N]
+
+Show a memory snapshot and the top memory-consuming processes.
+
+Options:
+  --top N     Number of processes to show (default: 5)
+  -h, --help  Show this help
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --top)
+                shift
+                [[ $# -gt 0 ]] || { echo "Missing value for --top" >&2; exit 1; }
+                [[ "$1" =~ ^[0-9]+$ ]] || { echo "Invalid value for --top: $1" >&2; exit 1; }
+                TOP_N="$1"
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                usage >&2
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+parse_args "$@"
+
+echo "==============================="
+echo "Memory Snapshot"
+echo "==============================="
+free -h
+echo
+echo "Top ${TOP_N} Processes By Memory"
+echo "==============================="
+ps -eo pid,comm,%mem,%cpu --sort=-%mem | head -n "$((TOP_N + 1))"

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: check-updates
+
+Check whether Amazon Linux release updates are available.
+
+Notes:
+  - This helper expects a dnf-based system such as Amazon Linux.
+  - If your environment requires elevated privileges, run it with sudo.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if ! command -v dnf >/dev/null 2>&1; then
+    echo "check-updates requires dnf and is intended for Amazon Linux hosts." >&2
+    exit 1
+fi
+
+echo "==============================="
+echo "Release Update Check"
+echo "==============================="
+echo "Checking for available release updates..."
+
+dnf check-release-update
