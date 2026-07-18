@@ -45,7 +45,15 @@ major_from_semver() {
 
 java_major() {
     local line="$1"
-    printf '%s\n' "${line}" | sed -E 's/.*version "([0-9]+).*/\1/'
+    if [[ "${line}" =~ version\ \"([0-9]+) ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+        return 0
+    fi
+    if [[ "${line}" =~ ^[^[:space:]]+[[:space:]]+([0-9]+) ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+        return 0
+    fi
+    printf '%s\n' ""
 }
 
 maven_major_minor() {
