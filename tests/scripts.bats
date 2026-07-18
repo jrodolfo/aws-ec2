@@ -34,8 +34,23 @@ setup() {
   run "${REPO_ROOT}/install/install-toolchain.sh" --dry-run --no-update
   [ "$status" -eq 0 ]
   [[ "$output" == *"Dry run     : enabled"* ]]
-  [[ "$output" == *"python3.11"* ]]
-  [[ "$output" == *"alias python=python3.11"* ]]
+  [[ "$output" == *"Node.js     : nvm 24"* ]]
+  [[ "$output" == *"Maven       : 3.9.11"* ]]
+  [[ "$output" == *"Would ensure /"*".bashrc.d/aws-ec2-toolchain.sh configures PATH, Python alias, and nvm"* ]]
+  [[ "$output" == *"Ensuring Node.js 24 is installed via nvm"* ]]
+  [[ "$output" == *"Ensuring codex CLI is installed under"* ]]
+  [[ "$output" == *"Would ensure Java 21 remains the default java/javac toolchain"* ]]
+  [[ "$output" == *"Would install Apache Maven 3.9.11"* ]]
+  [[ "$output" == *"\$ java --version"* ]]
+  [[ "$output" == *"\$ mvn --version"* ]]
+}
+
+@test "toolchain dry-run with adoptium25 keeps Java 21 as default" {
+  run "${REPO_ROOT}/install/install-toolchain.sh" --dry-run --no-update --java-mode adoptium25
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Java mode   : adoptium25"* ]]
+  [[ "$output" == *"Would install Adoptium JDK 25 side-by-side under /opt/java without changing the default java"* ]]
+  [[ "$output" == *"Would ensure Java 21 remains the default java/javac toolchain"* ]]
 }
 
 @test "dev-utils help works" {

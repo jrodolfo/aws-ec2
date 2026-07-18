@@ -7,9 +7,16 @@ source "${SCRIPT_DIR}/lib/common.sh"
 
 TARGET_USER="${SUDO_USER:-${USER:-ec2-user}}"
 TARGET_USER_HOME=""
+TARGET_USER_GROUP=""
 JAVA_MODE="distro"
 DRY_RUN=0
+SKIP_UPDATE=0
 DOCKER_COMPOSE_INSTALL_METHOD="unknown"
+NVM_VERSION="${NVM_VERSION:-0.40.5}"
+NODEJS_VERSION="${NODEJS_VERSION:-24}"
+MAVEN_VERSION="${MAVEN_VERSION:-3.9.11}"
+JAVA21_HOME=""
+JAVA25_HOME=""
 
 usage() {
     cat <<'EOF'
@@ -25,8 +32,6 @@ Options:
   -h, --help                    Show this help
 EOF
 }
-
-SKIP_UPDATE=0
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
@@ -66,52 +71,107 @@ ensure_user_exists() {
         err "User does not exist: ${TARGET_USER}"
         exit 1
     fi
-}
-
-resolve_user_home() {
-    local user_name="$1"
-    local home_dir=""
-    if command -v getent >/dev/null 2>&1; then
-        home_dir="$(getent passwd "${user_name}" 2>/dev/null | awk -F: '{print $6}')"
-    fi
-    if [[ -z "${home_dir}" ]]; then
-        home_dir="${HOME}"
-    fi
-    printf '%s\n' "${home_dir}"
+    TARGET_USER_GROUP="$(id -gn "${TARGET_USER}")"
 }
 
 run_as_target_user() {
+    run_as_user "${TARGET_USER}" "$@"
+}
+
+run_as_target_user_shell() {
+    local shell_command="$1"
+    run_as_user_shell "${TARGET_USER}" "${shell_command}"
+}
+
+capture_as_target_user_shell() {
+    local shell_command="$1"
     if [[ "${EUID}" -eq 0 ]]; then
-        run sudo -u "${TARGET_USER}" -H "$@"
+        sudo -u "${TARGET_USER}" -H bash -lc "${shell_command}"
     else
-        run "$@"
+        bash -lc "${shell_command}"
     fi
 }
 
-ensure_line_in_user_bashrc() {
-    local line="$1"
+run_in_target_user_nvm_shell() {
+    local command="$1"
+    local shell_command="
+export NVM_DIR='${TARGET_USER_HOME}/.nvm'
+if [ -s \"\$NVM_DIR/nvm.sh\" ]; then
+  . \"\$NVM_DIR/nvm.sh\"
+fi
+nvm use --silent default >/dev/null 2>&1 || true
+${command}
+"
+    run_as_target_user_shell "${shell_command}"
+}
+
+capture_in_target_user_nvm_shell() {
+    local command="$1"
+    local shell_command="
+export NVM_DIR='${TARGET_USER_HOME}/.nvm'
+if [ -s \"\$NVM_DIR/nvm.sh\" ]; then
+  . \"\$NVM_DIR/nvm.sh\"
+fi
+nvm use --silent default >/dev/null 2>&1 || true
+${command}
+"
+    capture_as_target_user_shell "${shell_command}"
+}
+
+ensure_toolchain_shell_snippet() {
+    local bashrc_d="${TARGET_USER_HOME}/.bashrc.d"
+    local snippet_path="${bashrc_d}/aws-ec2-toolchain.sh"
     local bashrc_path="${TARGET_USER_HOME}/.bashrc"
+    # shellcheck disable=SC2016
+    local bootstrap_line='[ -f "$HOME/.bashrc.d/aws-ec2-toolchain.sh" ] && . "$HOME/.bashrc.d/aws-ec2-toolchain.sh"'
+    local tmp_file=""
 
     if [[ "${DRY_RUN}" -eq 1 ]]; then
-        if [[ -f "${bashrc_path}" ]] && grep -Fq "${line}" "${bashrc_path}"; then
-            log "Already present in ${bashrc_path}: ${line}"
-        else
-            log "[dry-run] Would add to ${bashrc_path}: ${line}"
-        fi
+        log "[dry-run] Would ensure ${snippet_path} configures PATH, Python alias, and nvm"
+        log "[dry-run] Would ensure ${bashrc_path} sources ${snippet_path} before bootstrap"
         return 0
     fi
+
+    tmp_file="$(mktemp /tmp/aws-ec2-toolchain.XXXXXX)"
+    cat > "${tmp_file}" <<'EOF'
+# Managed by aws-ec2 install-toolchain.sh
+export PATH="$HOME/.local/bin:$PATH"
+alias python=python3.11
+
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+    . "$NVM_DIR/nvm.sh"
+    nvm use --silent default >/dev/null 2>&1 || true
+fi
+if [ -s "$NVM_DIR/bash_completion" ]; then
+    . "$NVM_DIR/bash_completion"
+fi
+EOF
+
+    run_as_target_user mkdir -p "${bashrc_d}"
+
+    if [[ -f "${snippet_path}" ]] && cmp -s "${tmp_file}" "${snippet_path}"; then
+        log "Unchanged: ${snippet_path}"
+    else
+        if [[ "${EUID}" -eq 0 ]]; then
+            run_root install -o "${TARGET_USER}" -g "${TARGET_USER_GROUP}" -m 0644 "${tmp_file}" "${snippet_path}"
+        else
+            run install -m 0644 "${tmp_file}" "${snippet_path}"
+        fi
+        log "Installed: ${snippet_path}"
+    fi
+
+    rm -f "${tmp_file}"
 
     if [[ ! -f "${bashrc_path}" ]]; then
         run_as_target_user touch "${bashrc_path}"
     fi
-
-    if grep -Fq "${line}" "${bashrc_path}"; then
-        log "Already present in ${bashrc_path}: ${line}"
-        return 0
+    if capture_as_target_user_shell "grep -Fq '${bootstrap_line}' '${bashrc_path}'"; then
+        log "Already present in ${bashrc_path}: ${bootstrap_line}"
+    else
+        run_as_target_user_shell "printf '\n%s\n' '${bootstrap_line}' >> '${bashrc_path}'"
+        log "Added to ${bashrc_path}: ${bootstrap_line}"
     fi
-
-    run_as_target_user bash -lc "printf '\n%s\n' '${line}' >> '${bashrc_path}'"
-    log "Added to ${bashrc_path}: ${line}"
 }
 
 install_pkg() {
@@ -121,7 +181,7 @@ install_pkg() {
 
 install_base_packages() {
     local pkg
-    for pkg in git docker nodejs npm tar; do
+    for pkg in git docker tar bubblewrap; do
         install_pkg "${pkg}"
     done
 
@@ -234,22 +294,37 @@ install_github_cli() {
     run_root dnf install -y gh
 }
 
+install_nvm() {
+    if [[ -s "${TARGET_USER_HOME}/.nvm/nvm.sh" ]]; then
+        log "Already installed: nvm"
+        return 0
+    fi
+
+    run_as_target_user mkdir -p "${TARGET_USER_HOME}/.nvm"
+    run_as_target_user_shell "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh | bash"
+}
+
+install_nodejs() {
+    install_nvm
+    ensure_toolchain_shell_snippet
+
+    log "Ensuring Node.js ${NODEJS_VERSION} is installed via nvm for ${TARGET_USER}"
+    run_in_target_user_nvm_shell "
+nvm install ${NODEJS_VERSION}
+nvm alias default ${NODEJS_VERSION}
+nvm use --silent default >/dev/null
+"
+}
+
 install_codex_cli() {
-    if command -v codex >/dev/null 2>&1; then
-        log "Already installed: codex"
-        return 0
-    fi
-
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-        run_root npm install -g @openai/codex
-        return 0
-    fi
-
-    run_root npm install -g @openai/codex >/dev/null 2>&1 || {
-        err "Failed to install codex CLI with npm."
-        err "Try manually: sudo npm install -g @openai/codex"
-        return 1
-    }
+    log "Ensuring codex CLI is installed under ${TARGET_USER}'s nvm environment"
+    run_in_target_user_nvm_shell "
+if npm list -g @openai/codex >/dev/null 2>&1; then
+  echo 'Already installed: codex'
+else
+  npm install -g @openai/codex
+fi
+"
 }
 
 configure_docker() {
@@ -269,23 +344,95 @@ configure_docker() {
     fi
 }
 
-install_java_distro() {
-    if command -v java >/dev/null 2>&1 && command -v javac >/dev/null 2>&1; then
-        log "Java already available in PATH"
+resolve_java21_home() {
+    local candidate=""
+    if rpm_available && rpm -q java-21-amazon-corretto-devel >/dev/null 2>&1; then
+        candidate="$(
+            rpm -ql java-21-amazon-corretto-devel 2>/dev/null \
+                | awk '/\/bin\/java$/ {sub(/\/bin\/java$/, ""); print; exit}'
+        )"
+    fi
+    if [[ -z "${candidate}" ]] && [[ -d /usr/lib/jvm ]]; then
+        candidate="$(find /usr/lib/jvm -maxdepth 1 -type d -name 'java-21-amazon-corretto*' | sort | head -n1)"
+    fi
+    [[ -n "${candidate}" ]] || return 1
+    printf '%s\n' "${candidate}"
+}
+
+clear_java25_override_link() {
+    local link_path="$1"
+    local expected_suffix="$2"
+    local link_target=""
+
+    [[ -L "${link_path}" ]] || return 0
+    link_target="$(readlink -f "${link_path}" 2>/dev/null || true)"
+    case "${link_target}" in
+        /opt/java/jdk-25*/bin/"${expected_suffix}")
+            run_root rm -f "${link_path}"
+            log "Removed legacy Java 25 override: ${link_path}"
+            ;;
+    esac
+}
+
+set_java21_default() {
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would ensure Java 21 remains the default java/javac toolchain"
+        JAVA21_HOME="/usr/lib/jvm/java-21-amazon-corretto"
         return 0
     fi
 
-    if run_root dnf install -y java-21-amazon-corretto-devel; then
-        return 0
+    JAVA21_HOME="$(resolve_java21_home)" || {
+        err "Could not determine Java 21 installation path."
+        return 1
+    }
+
+    clear_java25_override_link /usr/local/bin/java java
+    clear_java25_override_link /usr/local/bin/javac javac
+
+    if command -v alternatives >/dev/null 2>&1; then
+        if alternatives --display java 2>/dev/null | grep -Fq "${JAVA21_HOME}/bin/java"; then
+            run_root alternatives --set java "${JAVA21_HOME}/bin/java"
+        fi
+        if alternatives --display javac 2>/dev/null | grep -Fq "${JAVA21_HOME}/bin/javac"; then
+            run_root alternatives --set javac "${JAVA21_HOME}/bin/javac"
+        fi
     fi
 
-    warn "Could not install Java 21 Corretto package. Trying Java 17 Corretto."
-    run_root dnf install -y java-17-amazon-corretto-devel
+    log "Java 21 default home: ${JAVA21_HOME}"
+}
+
+install_java21() {
+    install_pkg java-21-amazon-corretto-devel
+    set_java21_default
+}
+
+resolve_java25_home() {
+    local candidate=""
+    if [[ -d /opt/java ]]; then
+        candidate="$(find /opt/java -maxdepth 1 -type d -name 'jdk-25*' | sort | tail -n1)"
+    fi
+    [[ -n "${candidate}" ]] || return 1
+    printf '%s\n' "${candidate}"
 }
 
 install_java_adoptium25() {
     require_cmd uname
     local arch=""
+    local tmp_dir="/tmp/aws-ec2-jdk25"
+    local tarball="${tmp_dir}/jdk25.tar.gz"
+    local url="https://api.adoptium.net/v3/binary/latest/25/ga/linux"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would install Adoptium JDK 25 side-by-side under /opt/java without changing the default java"
+        JAVA25_HOME="/opt/java/jdk-25"
+        return 0
+    fi
+
+    if JAVA25_HOME="$(resolve_java25_home 2>/dev/null)"; then
+        log "Java 25 already installed side-by-side at ${JAVA25_HOME}"
+        return 0
+    fi
+
     case "$(uname -m)" in
         x86_64) arch="x64" ;;
         aarch64) arch="aarch64" ;;
@@ -295,9 +442,7 @@ install_java_adoptium25() {
             ;;
     esac
 
-    local tmp_dir="/tmp/aws-ec2-jdk25"
-    local tarball="${tmp_dir}/jdk25.tar.gz"
-    local url="https://api.adoptium.net/v3/binary/latest/25/ga/linux/${arch}/jdk/hotspot/normal/eclipse"
+    url="${url}/${arch}/jdk/hotspot/normal/eclipse"
 
     run rm -rf "${tmp_dir}"
     run mkdir -p "${tmp_dir}"
@@ -305,31 +450,18 @@ install_java_adoptium25() {
     run_root mkdir -p /opt/java
     run_root tar -xzf "${tarball}" -C /opt/java
 
-    if [[ "${DRY_RUN}" -eq 1 ]]; then
-        log "[dry-run] Detect latest extracted /opt/java/jdk-25* and link java/javac"
-        return 0
-    fi
-
-    local jdk_dir
-    jdk_dir="$(
-        find /opt/java -maxdepth 1 -type d -name 'jdk-25*' -printf '%T@ %p\n' 2>/dev/null \
-            | sort -nr \
-            | head -n1 \
-            | cut -d' ' -f2-
-    )"
-    if [[ -z "${jdk_dir}" ]]; then
+    JAVA25_HOME="$(resolve_java25_home)" || {
         err "Could not find extracted JDK under /opt/java/jdk-25*"
         exit 1
-    fi
+    }
 
-    run_root ln -sfn "${jdk_dir}/bin/java" /usr/local/bin/java
-    run_root ln -sfn "${jdk_dir}/bin/javac" /usr/local/bin/javac
+    log "Installed Java 25 side-by-side at ${JAVA25_HOME}"
 }
 
 install_java() {
+    install_java21
     case "${JAVA_MODE}" in
         distro)
-            install_java_distro
             ;;
         adoptium25)
             install_java_adoptium25
@@ -341,6 +473,52 @@ install_java() {
     esac
 }
 
+install_maven() {
+    local base_dir="/opt/apache-maven-${MAVEN_VERSION}"
+    local current_link="/opt/apache-maven"
+    local tarball="/tmp/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+    local url="https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+    local wrapper="/usr/local/bin/mvn"
+    local debug_wrapper="/usr/local/bin/mvnDebug"
+    local tmp_wrapper=""
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would install Apache Maven ${MAVEN_VERSION} under ${base_dir}"
+        log "[dry-run] Would install mvn wrapper pinned to Java 21"
+        return 0
+    fi
+
+    if [[ ! -d "${base_dir}" ]]; then
+        run curl -fsSL -o "${tarball}" "${url}" || run curl -fsSL -o "${tarball}" \
+            "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+        run_root tar -xzf "${tarball}" -C /opt
+    else
+        log "Already installed: Apache Maven ${MAVEN_VERSION}"
+    fi
+
+    run_root ln -sfn "${base_dir}" "${current_link}"
+
+    tmp_wrapper="$(mktemp /tmp/aws-ec2-mvn.XXXXXX)"
+    cat > "${tmp_wrapper}" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export JAVA_HOME="${JAVA21_HOME}"
+exec /opt/apache-maven/bin/mvn "\$@"
+EOF
+    run_root install -m 0755 "${tmp_wrapper}" "${wrapper}"
+    rm -f "${tmp_wrapper}"
+
+    tmp_wrapper="$(mktemp /tmp/aws-ec2-mvndebug.XXXXXX)"
+    cat > "${tmp_wrapper}" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export JAVA_HOME="${JAVA21_HOME}"
+exec /opt/apache-maven/bin/mvnDebug "\$@"
+EOF
+    run_root install -m 0755 "${tmp_wrapper}" "${debug_wrapper}"
+    rm -f "${tmp_wrapper}"
+}
+
 install_python_ytdlp() {
     install_pkg python3.11
     install_pkg python3.11-pip
@@ -349,9 +527,7 @@ install_python_ytdlp() {
     run_as_target_user python3.11 -m pip install --user --upgrade pip setuptools wheel
     run_as_target_user python3.11 -m pip install --user --upgrade --force-reinstall yt-dlp
 
-    # shellcheck disable=SC2016
-    ensure_line_in_user_bashrc 'export PATH="$HOME/.local/bin:$PATH"'
-    ensure_line_in_user_bashrc 'alias python=python3.11'
+    ensure_toolchain_shell_snippet
 }
 
 print_version_if_available() {
@@ -361,6 +537,43 @@ print_version_if_available() {
         printf '%-16s %s\n' "${label}:" "$("$@" 2>/dev/null | head -n1)"
     else
         printf '%-16s %s\n' "${label}:" "not found"
+    fi
+}
+
+print_target_user_version_if_available() {
+    local label="$1"
+    local command="$2"
+    local output=""
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        printf '%-16s %s\n' "${label}:" "[dry-run]"
+        return 0
+    fi
+
+    output="$(capture_in_target_user_nvm_shell "${command}" 2>/dev/null | head -n1 || true)"
+    if [[ -n "${output}" ]]; then
+        printf '%-16s %s\n' "${label}:" "${output}"
+    else
+        printf '%-16s %s\n' "${label}:" "not found"
+    fi
+}
+
+print_verification_command() {
+    local label="$1"
+    local command="$2"
+    local runner="$3"
+
+    log ""
+    log "\$ ${label}"
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] ${label}"
+        return 0
+    fi
+
+    if [[ "${runner}" == "target-user-nvm" ]]; then
+        capture_in_target_user_nvm_shell "${command}" 2>&1 || true
+    else
+        bash -lc "${command}" 2>&1 || true
     fi
 }
 
@@ -389,12 +602,13 @@ verify_installation() {
 
     print_version_if_available "Git" git --version
     print_version_if_available "GitHub CLI" gh --version
-    print_version_if_available "Codex CLI" codex --version
-    print_version_if_available "Java" java -version
-    print_version_if_available "Javac" javac -version
-    print_version_if_available "Maven" mvn -version
-    print_version_if_available "Node" node -v
-    print_version_if_available "NPM" npm -v
+    print_version_if_available "Bubblewrap" bwrap --version
+    print_version_if_available "Java" java --version
+    print_version_if_available "Javac" javac --version
+    print_version_if_available "Maven" mvn --version
+    print_target_user_version_if_available "Node" "node -v"
+    print_target_user_version_if_available "NPM" "npm -v"
+    print_target_user_version_if_available "Codex CLI" "codex --version"
     print_version_if_available "Python 3.11" python3.11 --version
 
     local ytdlp_bin="${TARGET_USER_HOME}/.local/bin/yt-dlp"
@@ -403,6 +617,11 @@ verify_installation() {
     else
         printf '%-16s %s\n' "yt-dlp:" "not found"
     fi
+
+    log ""
+    log "Verification:"
+    print_verification_command "java --version" "java --version" "host"
+    print_verification_command "mvn --version" "mvn --version" "host"
 }
 
 main() {
@@ -418,23 +637,28 @@ main() {
     log "Starting toolchain installation"
     log "Target user : ${TARGET_USER}"
     log "Java mode   : ${JAVA_MODE}"
+    log "Node.js     : nvm ${NODEJS_VERSION}"
+    log "Maven       : ${MAVEN_VERSION}"
     [[ "${DRY_RUN}" -eq 1 ]] && log "Dry run     : enabled"
     [[ "${SKIP_UPDATE}" -eq 1 ]] && log "Update step : skipped"
 
     if [[ "${SKIP_UPDATE}" -eq 0 ]]; then
         run_root dnf update -y
     fi
+
     install_base_packages
     install_github_cli
+    install_nodejs
     install_codex_cli
     configure_docker
     install_java
+    install_maven
     install_python_ytdlp
     verify_installation
 
     log ""
     log "Done."
-    log "Verify with: docker info && (docker compose version || docker-compose version)"
+    log "Verify with: docker info && docker compose version"
     log "If docker commands fail without sudo, log out and back in for group changes to apply."
 }
 

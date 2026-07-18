@@ -28,6 +28,23 @@ run_root() {
     fi
 }
 
+run_as_user() {
+    local user_name="$1"
+    shift
+    if [[ "${EUID}" -eq 0 ]]; then
+        run sudo -u "${user_name}" -H "$@"
+    else
+        run "$@"
+    fi
+}
+
+run_as_user_shell() {
+    local user_name="$1"
+    shift
+    local shell_command="$1"
+    run_as_user "${user_name}" bash -lc "${shell_command}"
+}
+
 require_cmd() {
     local cmd="$1"
     if ! command -v "${cmd}" >/dev/null 2>&1; then
@@ -53,6 +70,18 @@ validate_os_amzn() {
         warn "This script is tuned for Amazon Linux (detected ID=${ID:-unknown})."
         warn "Proceeding, but package names or behavior may differ."
     fi
+}
+
+resolve_user_home() {
+    local user_name="$1"
+    local home_dir=""
+    if command -v getent >/dev/null 2>&1; then
+        home_dir="$(getent passwd "${user_name}" 2>/dev/null | awk -F: '{print $6}')"
+    fi
+    if [[ -z "${home_dir}" ]]; then
+        home_dir="${HOME}"
+    fi
+    printf '%s\n' "${home_dir}"
 }
 
 rpm_available() {
