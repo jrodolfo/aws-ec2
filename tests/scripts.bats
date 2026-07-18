@@ -139,7 +139,7 @@ EOF
   [[ "$output" == *"Would install pre-commit with pipx"* || "$output" == *"pipx install pre-commit"* ]]
   [[ "$output" == *"Would install yamllint with pipx"* || "$output" == *"pipx install yamllint"* ]]
   [[ "$output" == *"Would install bats-core 1.13.0 from source tarball"* ]]
-  [[ "$output" == *"Would install delta 0.19.2 from https://github.com/dandavison/delta/releases/download/0.19.2/"* ]]
+  [[ "$output" == *"Would install delta 0.19.2 from https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-x86_64-unknown-linux-gnu.tar.gz"* || "$output" == *"Would install delta 0.19.2 from https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-aarch64-unknown-linux-gnu.tar.gz"* ]]
   [[ "$output" == *"Would install fzf 0.72.0 from https://github.com/junegunn/fzf/releases/download/0.72.0/"* ]]
   [[ "$output" == *"Would install zoxide 0.9.9 with cargo"* || "$output" == *"cargo install --locked zoxide --version 0.9.9"* ]]
   [[ "$output" == *"Would install just 1.50.0 with cargo"* || "$output" == *"cargo install --locked just --version 1.50.0"* ]]

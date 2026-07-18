@@ -426,8 +426,8 @@ install_git_delta() {
 
     arch="$(arch_linux_x86_64_aarch64)"
     case "${arch}" in
-        amd64) arch="x86_64-unknown-linux-gnu" ;;
-        arm64) arch="aarch64-unknown-linux-gnu" ;;
+        x86_64) arch="x86_64-unknown-linux-gnu" ;;
+        aarch64) arch="aarch64-unknown-linux-gnu" ;;
     esac
     url="https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/delta-${DELTA_VERSION}-${arch}.tar.gz"
     install_release_binary "delta" delta "${DELTA_VERSION}" "${url}" "delta-${DELTA_VERSION}-${arch}/delta" "tar.gz"
