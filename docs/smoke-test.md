@@ -7,6 +7,8 @@
 
 ## Development Toolchain
 
+Run `check-toolchain` and review the reported versions before checking the items below.
+
 □ Java 21
 □ Maven 3.9+
 □ Node 24

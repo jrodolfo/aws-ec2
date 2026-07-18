@@ -79,6 +79,33 @@ EOF
   [[ "$output" == *" available)"* ]]
 }
 
+@test "check-toolchain prints core and optional sections" {
+  run "${REPO_ROOT}/ops/check-toolchain"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Core Toolchain"* ]]
+  [[ "$output" == *"Optional Extras"* ]]
+  [[ "$output" == *"Java"* ]]
+  [[ "$output" == *"Maven"* ]]
+  [[ "$output" == *"Node"* ]]
+  [[ "$output" == *"Codex"* ]]
+  [[ "$output" == *"GitHub CLI"* ]]
+  [[ "$output" == *"Docker"* ]]
+  [[ "$output" == *"Docker Compose"* ]]
+  [[ "$output" == *"Trivy"* ]]
+  [[ "$output" == *"Ollama"* ]]
+  [[ "$output" == *"shellcheck"* ]]
+  [[ "$output" == *"shfmt"* ]]
+  [[ "$output" == *"pre-commit"* ]]
+  [[ "$output" == *"yamllint"* ]]
+  [[ "$output" == *"actionlint"* ]]
+  [[ "$output" == *"bats"* ]]
+  [[ "$output" == *"delta"* ]]
+  [[ "$output" == *"fzf"* ]]
+  [[ "$output" == *"zoxide"* ]]
+  [[ "$output" == *"just"* ]]
+  [[ "$output" == *"tokei"* ]]
+  [[ "$output" == *"hyperfine"* ]]
+}
 @test "bootstrap help works" {
   run "${REPO_ROOT}/bootstrap.sh" --help
   [ "$status" -eq 0 ]

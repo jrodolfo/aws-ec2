@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ok() {
+    printf 'OK   %s\n' "$*"
+}
+
+miss() {
+    printf 'MISS %s\n' "$*"
+}
+
+warn() {
+    printf 'WARN %s\n' "$*"
+}
+
+usage() {
+    cat <<'EOF'
+Usage: check-toolchain
+
+Show the installed development toolchain and optional extras managed by aws-ec2.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+version_line() {
+    local cmd="$1"
+    shift
+    "$cmd" "$@" 2>/dev/null | head -n1
+}
+
+have_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+major_from_semver() {
+    local version="$1"
+    version="${version#v}"
+    version="${version%%.*}"
+    printf '%s\n' "${version}"
+}
+
+java_major() {
+    local line="$1"
+    printf '%s\n' "${line}" | sed -E 's/.*version "([0-9]+).*/\1/'
+}
+
+maven_major_minor() {
+    local line="$1"
+    printf '%s\n' "${line}" | sed -E 's/.* ([0-9]+)\.([0-9]+)\..*/\1 \2/'
+}
+
+check_java() {
+    local line major
+    if ! have_cmd java; then
+        miss "Java 21"
+        return
+    fi
+    line="$(version_line java --version)"
+    major="$(java_major "${line}")"
+    if [[ "${major}" == "21" ]]; then
+        ok "Java ${line}"
+    else
+        warn "Java ${line}"
+    fi
+}
+
+check_maven() {
+    local line major minor
+    if ! have_cmd mvn; then
+        miss "Maven 3.9+"
+        return
+    fi
+    line="$(version_line mvn --version)"
+    read -r major minor <<<"$(maven_major_minor "${line}")"
+    if [[ "${major}" == "3" && "${minor}" =~ ^[0-9]+$ && "${minor}" -ge 9 ]]; then
+        ok "Maven ${line}"
+    else
+        warn "Maven ${line}"
+    fi
+}
+
+check_node() {
+    local line major
+    if ! have_cmd node; then
+        miss "Node 24"
+        return
+    fi
+    line="$(version_line node -v)"
+    major="$(major_from_semver "${line}")"
+    if [[ "${major}" == "24" ]]; then
+        ok "Node ${line}"
+    else
+        warn "Node ${line}"
+    fi
+}
+
+check_codex() {
+    if have_cmd codex; then
+        ok "Codex $(version_line codex --version)"
+    else
+        miss "Codex"
+    fi
+}
+
+check_github_cli() {
+    if have_cmd gh; then
+        ok "GitHub CLI $(version_line gh --version)"
+    else
+        miss "GitHub CLI"
+    fi
+}
+
+check_docker() {
+    if have_cmd docker; then
+        ok "Docker $(version_line docker --version)"
+    else
+        miss "Docker"
+    fi
+}
+
+check_docker_compose() {
+    if have_cmd docker && docker compose version >/dev/null 2>&1; then
+        ok "Docker Compose $(docker compose version 2>/dev/null | head -n1)"
+    elif have_cmd docker-compose; then
+        ok "Docker Compose $(version_line docker-compose version)"
+    else
+        miss "Docker Compose"
+    fi
+}
+
+check_trivy() {
+    if have_cmd trivy; then
+        ok "Trivy $(version_line trivy --version)"
+    else
+        miss "Trivy"
+    fi
+}
+
+check_ollama() {
+    if have_cmd ollama; then
+        ok "Ollama $(version_line ollama -v)"
+    else
+        miss "Ollama (optional)"
+    fi
+}
+
+check_extra() {
+    local label="$1"
+    local cmd="$2"
+    shift 2
+    if have_cmd "${cmd}"; then
+        ok "${label} $(version_line "${cmd}" "$@")"
+    else
+        miss "${label}"
+    fi
+}
+
+echo "==============================="
+echo "Core Toolchain"
+echo "==============================="
+check_java
+check_maven
+check_node
+check_codex
+check_github_cli
+check_docker
+check_docker_compose
+check_trivy
+check_ollama
+echo
+
+echo "==============================="
+echo "Optional Extras"
+echo "==============================="
+check_extra "shellcheck" shellcheck --version
+check_extra "shfmt" shfmt --version
+check_extra "pre-commit" pre-commit --version
+check_extra "yamllint" yamllint --version
+check_extra "actionlint" actionlint -version
+check_extra "bats" bats --version
+check_extra "delta" delta --version
+check_extra "fzf" fzf --version
+check_extra "zoxide" zoxide --version
+check_extra "just" just --version
+check_extra "tokei" tokei --version
+check_extra "hyperfine" hyperfine --version

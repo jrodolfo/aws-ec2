@@ -35,6 +35,7 @@ aws-ec2/
 │   ├── check-memory
 │   ├── check-updates
 │   ├── check-disk
+│   ├── check-toolchain
 │   ├── docker-prune-safe
 │   ├── ec2info
 │   ├── linuxinfo
@@ -249,6 +250,7 @@ What it does:
 Useful `ops/` helpers after bootstrap:
 - `check-disk` shows root filesystem usage, large home directories, and Docker disk usage
 - `check-memory --top 10` shows a memory snapshot and top memory-consuming processes
+- `check-toolchain` shows the current core toolchain and optional extras with versions
 - `check-updates` checks for Amazon Linux release updates on `dnf`-based systems
 - `docker-prune-safe` prunes unused Docker images and build cache without deleting volumes
 - `ec2info` prints EC2 instance and Linux summary details
