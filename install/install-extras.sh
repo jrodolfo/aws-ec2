@@ -448,7 +448,7 @@ install_fzf() {
     fi
 
     arch="$(arch_linux_amd64_arm64)"
-    url="https://github.com/junegunn/fzf/releases/download/${FZF_VERSION}/fzf-${FZF_VERSION}-linux_${arch}.tar.gz"
+    url="https://github.com/junegunn/fzf/releases/download/v${FZF_VERSION}/fzf-${FZF_VERSION}-linux_${arch}.tar.gz"
     install_release_binary "fzf" fzf "${FZF_VERSION}" "${url}" "fzf" "tar.gz"
 }
 
