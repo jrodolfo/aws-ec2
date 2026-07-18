@@ -1,8 +1,8 @@
 SHELL := /usr/bin/env bash
 
-SHELL_SCRIPTS := bootstrap.sh install/lib/common.sh install/install-toolchain.sh install/install-dev-utils.sh install/install-extras.sh $(wildcard ops/*)
+SHELL_SCRIPTS := bootstrap.sh install/lib/common.sh install/install-toolchain.sh install/install-dev-utils.sh install/install-extras.sh install/install-ollama.sh $(wildcard ops/*)
 
-.PHONY: help bootstrap dry-run force install-toolchain install-toolchain-dry-run install-dev-utils install-dev-utils-dry-run install-extras install-extras-dry-run lint-shell test-shell
+.PHONY: help bootstrap dry-run force install-toolchain install-toolchain-dry-run install-dev-utils install-dev-utils-dry-run install-extras install-extras-dry-run install-ollama install-ollama-dry-run lint-shell test-shell
 
 help:
 	@echo "Targets:"
@@ -15,6 +15,8 @@ help:
 	@echo "  make install-dev-utils-dry-run  Preview minimal EC2 dev utility installation"
 	@echo "  make install-extras             Install optional EC2 extras"
 	@echo "  make install-extras-dry-run     Preview optional EC2 extras installation"
+	@echo "  make install-ollama            Install optional Ollama service"
+	@echo "  make install-ollama-dry-run    Preview optional Ollama installation"
 	@echo "  make lint-shell  Lint shell scripts with shellcheck"
 	@echo "  make test-shell  Run bats shell tests"
 
@@ -44,6 +46,12 @@ install-extras:
 
 install-extras-dry-run:
 	./install/install-extras.sh --dry-run
+
+install-ollama:
+	./install/install-ollama.sh
+
+install-ollama-dry-run:
+	./install/install-ollama.sh --dry-run
 
 lint-shell:
 	@if command -v shellcheck >/dev/null 2>&1; then \

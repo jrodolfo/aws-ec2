@@ -11,6 +11,10 @@
 
 Reusable server setup repository for provisioning a fresh Linux EC2 instance with personal dotfiles and utility scripts.
 
+## Design Philosophy
+
+This repository is opinionated by design. It bootstraps a fresh Amazon Linux 2023 EC2 instance into my preferred development environment. It is optimized for reproducibility and simplicity rather than supporting every possible existing configuration or Linux distribution.
+
 ## Project Structure
 
 ```text
@@ -20,6 +24,7 @@ aws-ec2/
 │   │   └── common.sh
 │   ├── install-dev-utils.sh
 │   ├── install-extras.sh
+│   ├── install-ollama.sh
 │   └── install-toolchain.sh
 ├── dotfiles/
 │   ├── .bashrc
@@ -29,6 +34,8 @@ aws-ec2/
 ├── ops/
 │   ├── check-memory
 │   ├── check-updates
+│   ├── check-disk
+│   ├── docker-prune-safe
 │   ├── ec2info
 │   ├── linuxinfo
 │   └── showip
@@ -45,6 +52,8 @@ aws-ec2/
 ## Fresh EC2 Minimum Sequence
 
 ### Use As-Is (author setup)
+
+Start with a root volume sized for development work, not the tiny default. For Docker and local AI tooling, use roughly 30 to 40 GB.
 
 ```bash
 sudo dnf update -y
@@ -99,10 +108,11 @@ For complete SSH setup and troubleshooting instructions, see [`doc/ssh/NOTES.md`
 
 Default behavior:
 - updates OS packages with `dnf update -y`
-- installs Docker, Docker Compose, Git, GitHub CLI, Codex CLI, Java, Node/NPM, `curl`, Python 3.11, and `yt-dlp`
+- installs Docker, Docker Compose, Git, GitHub CLI, Bubblewrap, Java 21, Apache Maven 3.9+, `curl`, Python 3.11, and `yt-dlp`
+- installs `nvm` for the target user, then installs Node.js 24 and Codex inside that user-scoped environment
 - enables and starts Docker service
 - adds the selected user to the `docker` group
-- updates `~/.bashrc` with `export PATH="$HOME/.local/bin:$PATH"` and `alias python=python3.11`
+- installs a managed `~/.bashrc.d/aws-ec2-toolchain.sh` snippet for `nvm`, `PATH`, and Python alias setup
 
 Useful options:
 
@@ -115,10 +125,12 @@ Useful options:
 ```
 
 Notes:
-- Script is tuned for Amazon Linux with `dnf` and `rpm`.
+- Script is tuned for Amazon Linux 2023 with `dnf`, `rpm`, and a standard fresh-host layout.
 - After Docker group changes, log out and back in.
 - Docker Compose package names may vary by AMI; the script falls back automatically if `docker-compose-plugin` is unavailable.
 - Binary fallback installs Docker Compose as a Docker CLI plugin at `/usr/libexec/docker/cli-plugins/docker-compose`.
+- Java 21 stays the default toolchain.
+- `--java-mode adoptium25` installs Java 25 side-by-side under `/opt/java` without overriding the default `java`, `javac`, or Maven runtime.
 
 ## Python and yt-dlp Baseline (Amazon Linux 2023)
 
@@ -174,6 +186,7 @@ This includes tools such as:
 - `just`
 - `tokei`
 - `hyperfine`
+- `trivy`
 
 Useful options:
 
@@ -181,6 +194,34 @@ Useful options:
 ./install/install-extras.sh --dry-run
 ./install/install-extras.sh --no-update
 ```
+
+## Install Optional Ollama (EC2)
+
+If you want a local Ollama service for model work on the EC2 host, run:
+
+```bash
+./install/install-ollama.sh
+```
+
+Default behavior:
+- installs Ollama using the official Linux installer
+- configures a systemd override with `OLLAMA_HOST=0.0.0.0:11434`
+- enables and restarts the `ollama` service
+
+Useful options:
+
+```bash
+./install/install-ollama.sh --dry-run
+./install/install-ollama.sh --version 0.11.6
+./install/install-ollama.sh --model qwen2.5-coder:7b
+./install/install-ollama.sh --model llama3.1:8b --model nomic-embed-text
+./install/install-ollama.sh --no-start
+```
+
+Notes:
+- The default host binding allows Docker containers on the same machine to reach Ollama.
+- Model downloads are optional. No models are pulled unless you request them with `--model`.
+- Keep your EC2 security group tight if you expose port `11434`.
 
 ## Bootstrap on a New Machine
 
@@ -201,8 +242,10 @@ What it does:
 - preserves replaced files in `~/.bootstrap-backups/<timestamp>/`
 
 Useful `ops/` helpers after bootstrap:
+- `check-disk` shows root filesystem usage, large home directories, and Docker disk usage
 - `check-memory --top 10` shows a memory snapshot and top memory-consuming processes
 - `check-updates` checks for Amazon Linux release updates on `dnf`-based systems
+- `docker-prune-safe` prunes unused Docker images and build cache without deleting volumes
 - `ec2info` prints EC2 instance and Linux summary details
 - `linuxinfo` prints a local Linux system snapshot
 - `showip` prints the current public IP
@@ -245,6 +288,8 @@ make install-dev-utils
 make install-dev-utils-dry-run
 make install-extras
 make install-extras-dry-run
+make install-ollama
+make install-ollama-dry-run
 make lint-shell
 make test-shell
 ```
@@ -257,6 +302,8 @@ GitHub Actions runs shell checks and smoke tests on every push and pull request:
 - `./bootstrap.sh --dry-run`
 - `./install/install-toolchain.sh --dry-run --no-update`
 - `./install/install-dev-utils.sh --dry-run --no-update`
+- `./install/install-extras.sh --dry-run --no-update`
+- `./install/install-ollama.sh --dry-run`
 - `make test-shell`
 
 ## Contact

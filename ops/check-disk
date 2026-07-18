@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: check-disk
+
+Show root filesystem usage, the largest directories in the current home
+directory, and Docker disk usage when Docker is available.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+echo "==============================="
+echo "Filesystem Usage"
+echo "==============================="
+df -h /
+echo
+
+echo "==============================="
+echo "Largest Home Directories"
+echo "==============================="
+du -sh "${HOME}"/* "${HOME}"/.[!.]* "${HOME}"/..?* 2>/dev/null | sort -h | tail -n 10 || true
+echo
+
+if command -v docker >/dev/null 2>&1; then
+    echo "==============================="
+    echo "Docker Disk Usage"
+    echo "==============================="
+    docker system df
+else
+    echo "Docker not found"
+fi

@@ -95,6 +95,45 @@ install_actionlint() {
     run_root install -m 0755 "${tmp_dir}/actionlint" /usr/local/bin/actionlint
 }
 
+install_trivy() {
+    local repo_path="/etc/yum.repos.d/trivy.repo"
+    local tmp_repo=""
+
+    if command -v trivy >/dev/null 2>&1; then
+        log "Already installed: trivy"
+        return 0
+    fi
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would install Trivy repository configuration at ${repo_path}"
+        run_root dnf install -y trivy
+        return 0
+    fi
+
+    tmp_repo="$(mktemp /tmp/aws-ec2-trivy.XXXXXX)"
+    cat > "${tmp_repo}" <<'EOF'
+[trivy]
+name=Trivy repository
+baseurl=https://aquasecurity.github.io/trivy-repo/rpm/releases/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://aquasecurity.github.io/trivy-repo/rpm/public.key
+EOF
+
+    if [[ ! -f "${repo_path}" ]] || ! cmp -s "${tmp_repo}" "${repo_path}"; then
+        run_root install -m 0644 "${tmp_repo}" "${repo_path}"
+        log "Installed: ${repo_path}"
+    else
+        log "Unchanged: ${repo_path}"
+    fi
+    rm -f "${tmp_repo}"
+
+    run_root dnf install -y trivy >/dev/null 2>&1 || {
+        err "trivy package not available after enabling the Trivy repository."
+        return 1
+    }
+}
+
 print_version_if_available() {
     local label="$1"
     local bin="$2"
@@ -134,6 +173,7 @@ main() {
     try_install_pkg tokei || warn "tokei package not available"
     try_install_pkg hyperfine || warn "hyperfine package not available"
     install_actionlint || warn "actionlint could not be installed"
+    install_trivy || warn "trivy could not be installed"
 
     log ""
     log "Installed extras versions:"
@@ -149,6 +189,7 @@ main() {
     print_version_if_available "tokei" tokei --version
     print_version_if_available "hyperfine" hyperfine --version
     print_version_if_available "actionlint" actionlint -version
+    print_version_if_available "trivy" trivy --version
     log ""
     log "Done."
 }

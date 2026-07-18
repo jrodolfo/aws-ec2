@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PRUNE_ALL_IMAGES=0
+
+usage() {
+    cat <<'EOF'
+Usage: docker-prune-safe [--all-images]
+
+Prune unused Docker images and build cache without removing volumes.
+
+Options:
+  --all-images  Remove all unused images, not just dangling ones
+  -h, --help    Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --all-images)
+            PRUNE_ALL_IMAGES=1
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+if ! command -v docker >/dev/null 2>&1; then
+    echo "docker-prune-safe requires Docker." >&2
+    exit 1
+fi
+
+echo "==============================="
+echo "Docker Disk Usage Before Prune"
+echo "==============================="
+docker system df
+echo
+
+if [[ "${PRUNE_ALL_IMAGES}" -eq 1 ]]; then
+    docker image prune -a -f
+else
+    docker image prune -f
+fi
+
+docker builder prune -f
+
+echo
+echo "==============================="
+echo "Docker Disk Usage After Prune"
+echo "==============================="
+docker system df

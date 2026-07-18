@@ -45,6 +45,11 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # scripts from the tools folder
 export PATH="$HOME/.local/bin:$PATH"
 
+# Preferred editors
+export EDITOR=vi
+export VISUAL=vi
+export SYSTEMD_EDITOR=vi
+
 # User-specific shell snippets
 if [ -d ~/.bashrc.d ]; then
     for rc in ~/.bashrc.d/*; do

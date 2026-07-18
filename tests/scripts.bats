@@ -47,6 +47,16 @@ EOF
   [[ "$output" == *"v24.18.0"* ]]
 }
 
+@test "repo bashrc exports preferred editors" {
+  export TEST_HOME="${BATS_TEST_TMPDIR}/editor-home"
+  mkdir -p "${TEST_HOME}"
+  cp "${REPO_ROOT}/dotfiles/.bashrc" "${TEST_HOME}/.bashrc"
+
+  run env HOME="${TEST_HOME}" bash --noprofile --norc -lc '. "$HOME/.bashrc"; printf "%s|%s|%s\n" "$EDITOR" "$VISUAL" "$SYSTEMD_EDITOR"'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"vi|vi|vi"* ]]
+}
+
 @test "bootstrap help works" {
   run "${REPO_ROOT}/bootstrap.sh" --help
   [ "$status" -eq 0 ]
@@ -111,4 +121,24 @@ EOF
   run "${REPO_ROOT}/install/install-dev-utils.sh" --dry-run --no-update
   [ "$status" -eq 0 ]
   [[ "$output" == *"Dry run : enabled"* ]]
+}
+
+@test "extras dry-run includes trivy" {
+  run "${REPO_ROOT}/install/install-extras.sh" --dry-run --no-update
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Already installed: trivy"* || "$output" == *"dnf install -y trivy"* ]]
+}
+
+@test "ollama help works" {
+  run "${REPO_ROOT}/install/install-ollama.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage: ./install/install-ollama.sh [OPTIONS]"* ]]
+}
+
+@test "ollama dry-run supports optional models and host binding" {
+  run "${REPO_ROOT}/install/install-ollama.sh" --dry-run --host 0.0.0.0:11434 --model qwen2.5-coder:7b
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Host binding : 0.0.0.0:11434"* ]]
+  [[ "$output" == *"Would run: curl -fsSL https://ollama.com/install.sh | sh"* ]]
+  [[ "$output" == *"[dry-run] ollama pull qwen2.5-coder:7b"* ]]
 }

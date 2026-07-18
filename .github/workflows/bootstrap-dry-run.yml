@@ -41,5 +41,11 @@ jobs:
       - name: Run dev-utils dry-run
         run: ./install/install-dev-utils.sh --dry-run --no-update
 
+      - name: Run extras dry-run
+        run: ./install/install-extras.sh --dry-run --no-update
+
+      - name: Run Ollama dry-run
+        run: ./install/install-ollama.sh --dry-run
+
       - name: Run shell tests
         run: make test-shell
