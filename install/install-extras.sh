@@ -613,6 +613,7 @@ main() {
 
     log "Starting optional extras installation"
     log "Target user : ${TARGET_USER}"
+    log "This script will try to install pipx, shellcheck, shfmt, pre-commit, yamllint, bats, delta, fzf, zoxide, just, tokei, hyperfine, cargo, actionlint, and trivy."
     [[ "${DRY_RUN}" -eq 1 ]] && log "Dry run     : enabled"
     [[ "${SKIP_UPDATE}" -eq 1 ]] && log "Update step : skipped"
 
