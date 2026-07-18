@@ -9,7 +9,7 @@ DRY_RUN=0
 SKIP_UPDATE=0
 TARGET_USER="${SUDO_USER:-${USER:-ec2-user}}"
 TARGET_USER_HOME=""
-SHELLCHECK_VERSION="${SHELLCHECK_VERSION:-stable}"
+SHELLCHECK_VERSION="${SHELLCHECK_VERSION:-0.10.0}"
 SHFMT_VERSION="${SHFMT_VERSION:-3.13.1}"
 FZF_VERSION="${FZF_VERSION:-0.72.0}"
 BATS_VERSION="${BATS_VERSION:-1.13.0}"
@@ -54,6 +54,10 @@ parse_args() {
 
 run_as_target_user() {
     run_as_user "${TARGET_USER}" "$@"
+}
+
+install_step() {
+    printf 'Installing %s...\n' "$*"
 }
 
 add_path_now() {
@@ -135,6 +139,7 @@ ensure_pipx() {
     fi
 
     require_cmd python3.11
+    install_step "pipx with python3.11 user install"
     run_as_target_user python3.11 -m pip install --user --upgrade pip >/dev/null
     run_as_target_user python3.11 -m pip install --user pipx >/dev/null
     ensure_local_bin_path
@@ -164,6 +169,23 @@ ensure_cargo() {
     }
 }
 
+download_to_file() {
+    local label="$1"
+    local url="$2"
+    local destination="$3"
+
+    if [[ "${DRY_RUN}" -eq 1 ]]; then
+        log "[dry-run] Would download ${label} from ${url}"
+        return 0
+    fi
+
+    install_step "${label} from ${url}"
+    if ! curl -fsSL -o "${destination}" "${url}"; then
+        err "Failed to download ${label} from ${url}"
+        return 1
+    fi
+}
+
 install_release_binary() {
     local label="$1"
     local bin_name="$2"
@@ -185,20 +207,21 @@ install_release_binary() {
         return 0
     fi
 
-    require_cmd curl
     require_cmd tar
     run rm -rf "${tmp_dir}"
     run mkdir -p "${tmp_dir}"
-    run curl -fsSL -o "${archive_path}" "${url}"
+    download_to_file "${label} ${version}" "${url}" "${archive_path}"
 
     case "${archive_ext}" in
         tar.gz)
+            install_step "extracting ${label} ${version}"
             run tar -xzf "${archive_path}" -C "${tmp_dir}"
             ;;
         tar.xz)
             if ! command -v xz >/dev/null 2>&1; then
                 try_install_pkg xz
             fi
+            install_step "extracting ${label} ${version}"
             run tar -xJf "${archive_path}" -C "${tmp_dir}"
             ;;
         *)
@@ -207,6 +230,7 @@ install_release_binary() {
             ;;
     esac
 
+    install_step "installing ${label} ${version} to ${install_path}"
     run_root install -m 0755 "${tmp_dir}/${extracted_bin_relpath}" "${install_path}"
 }
 
@@ -228,8 +252,8 @@ install_single_binary() {
         return 0
     fi
 
-    require_cmd curl
-    run curl -fsSL -o "${tmp_path}" "${url}"
+    download_to_file "${label} ${version}" "${url}" "${tmp_path}"
+    install_step "installing ${label} ${version} to ${install_path}"
     run_root install -m 0755 "${tmp_path}" "${install_path}"
     run rm -f "${tmp_path}"
 }
@@ -251,6 +275,7 @@ install_pipx_package() {
         return 0
     fi
 
+    install_step "${label} with pipx"
     run_as_target_user pipx install "${package_name}" >/dev/null
 }
 
@@ -277,8 +302,10 @@ install_cargo_package() {
     fi
 
     if [[ -n "${version}" ]]; then
+        install_step "${crate_name} ${version} with cargo"
         run_as_target_user cargo install --locked "${crate_name}" --version "${version}" >/dev/null
     else
+        install_step "${crate_name} with cargo"
         run_as_target_user cargo install --locked "${crate_name}" >/dev/null
     fi
 }
@@ -298,8 +325,8 @@ install_shellcheck() {
     fi
 
     arch="$(arch_linux_x86_64_aarch64)"
-    url="https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.${arch}.tar.xz"
-    install_release_binary "shellcheck" shellcheck "${SHELLCHECK_VERSION}" "${url}" "shellcheck-${SHELLCHECK_VERSION}/shellcheck" "tar.xz"
+    url="https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.${arch}.tar.xz"
+    install_release_binary "shellcheck" shellcheck "${SHELLCHECK_VERSION}" "${url}" "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" "tar.xz"
 }
 
 install_shfmt() {
@@ -373,12 +400,13 @@ install_bats() {
         return 0
     fi
 
-    require_cmd curl
     require_cmd tar
     run rm -rf "${tmp_dir}"
     run mkdir -p "${tmp_dir}"
-    run curl -fsSL -o "${archive_path}" "${url}"
+    download_to_file "bats-core ${BATS_VERSION}" "${url}" "${archive_path}"
+    install_step "extracting bats-core ${BATS_VERSION}"
     run tar -xzf "${archive_path}" -C "${tmp_dir}"
+    install_step "installing bats-core ${BATS_VERSION} to /usr/local"
     run_root "${tmp_dir}/bats-core-${BATS_VERSION}/install.sh" /usr/local >/dev/null
 }
 
@@ -511,13 +539,14 @@ install_actionlint() {
         return 0
     fi
 
-    require_cmd curl
     require_cmd tar
     url="https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_${arch}.tar.gz"
     run rm -rf "${tmp_dir}"
     run mkdir -p "${tmp_dir}"
-    run curl -fsSL -o "${tarball}" "${url}"
+    download_to_file "actionlint ${version}" "${url}" "${tarball}"
+    install_step "extracting actionlint ${version}"
     run tar -xzf "${tarball}" -C "${tmp_dir}"
+    install_step "installing actionlint ${version} to /usr/local/bin/actionlint"
     run_root install -m 0755 "${tmp_dir}/actionlint" /usr/local/bin/actionlint
 }
 
@@ -547,6 +576,7 @@ gpgkey=https://aquasecurity.github.io/trivy-repo/rpm/public.key
 EOF
 
     if [[ ! -f "${repo_path}" ]] || ! cmp -s "${tmp_repo}" "${repo_path}"; then
+        install_step "Trivy repository configuration"
         run_root install -m 0644 "${tmp_repo}" "${repo_path}"
         log "Installed: ${repo_path}"
     else
@@ -554,6 +584,7 @@ EOF
     fi
     rm -f "${tmp_repo}"
 
+    install_step "trivy from configured repository"
     run_root dnf install -y trivy >/dev/null || {
         err "trivy package not available after enabling the Trivy repository."
         return 1

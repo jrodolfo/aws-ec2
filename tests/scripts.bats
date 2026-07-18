@@ -134,7 +134,7 @@ EOF
 @test "extras dry-run includes trivy" {
   run "${REPO_ROOT}/install/install-extras.sh" --dry-run --no-update
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Would install shellcheck stable from https://github.com/koalaman/shellcheck/releases/download/stable/"* ]]
+  [[ "$output" == *"Would install shellcheck 0.10.0 from https://github.com/koalaman/shellcheck/releases/download/v0.10.0/"* ]]
   [[ "$output" == *"Would install shfmt 3.13.1 from https://github.com/mvdan/sh/releases/download/v3.13.1/"* ]]
   [[ "$output" == *"Would install pre-commit with pipx"* || "$output" == *"pipx install pre-commit"* ]]
   [[ "$output" == *"Would install yamllint with pipx"* || "$output" == *"pipx install yamllint"* ]]
