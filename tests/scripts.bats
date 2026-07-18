@@ -134,7 +134,18 @@ EOF
 @test "extras dry-run includes trivy" {
   run "${REPO_ROOT}/install/install-extras.sh" --dry-run --no-update
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Already installed: trivy"* || "$output" == *"dnf install -y trivy"* ]]
+  [[ "$output" == *"Would install shellcheck stable from https://github.com/koalaman/shellcheck/releases/download/stable/"* ]]
+  [[ "$output" == *"Would install shfmt 3.13.1 from https://github.com/mvdan/sh/releases/download/v3.13.1/"* ]]
+  [[ "$output" == *"Would install pre-commit with pipx"* || "$output" == *"pipx install pre-commit"* ]]
+  [[ "$output" == *"Would install yamllint with pipx"* || "$output" == *"pipx install yamllint"* ]]
+  [[ "$output" == *"Would install bats-core 1.13.0 from source tarball"* ]]
+  [[ "$output" == *"Would install delta 0.19.2 from https://github.com/dandavison/delta/releases/download/0.19.2/"* ]]
+  [[ "$output" == *"Would install fzf 0.72.0 from https://github.com/junegunn/fzf/releases/download/0.72.0/"* ]]
+  [[ "$output" == *"Would install zoxide 0.9.9 with cargo"* || "$output" == *"cargo install --locked zoxide --version 0.9.9"* ]]
+  [[ "$output" == *"Would install just 1.50.0 with cargo"* || "$output" == *"cargo install --locked just --version 1.50.0"* ]]
+  [[ "$output" == *"Would install tokei 14.0.0 with cargo"* || "$output" == *"cargo install --locked tokei --version 14.0.0"* ]]
+  [[ "$output" == *"Would install hyperfine 1.20.0 with cargo"* || "$output" == *"cargo install --locked hyperfine --version 1.20.0"* ]]
+  [[ "$output" == *"Would install Trivy repository configuration"* || "$output" == *"Already installed: trivy"* || "$output" == *"dnf install -y trivy"* ]]
 }
 
 @test "ollama help works" {

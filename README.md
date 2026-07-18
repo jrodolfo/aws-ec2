@@ -195,6 +195,11 @@ Useful options:
 ./install/install-extras.sh --no-update
 ```
 
+Installation notes:
+- The script is optimized for a fresh Amazon Linux 2023 host.
+- It uses a mix of `dnf`, `pipx`, `cargo`, and official release binaries depending on the tool.
+- If one of the declared extras cannot be installed in the standard fresh-host path, the script fails instead of silently skipping it.
+
 ## Install Optional Ollama (EC2)
 
 If you want a local Ollama service for model work on the EC2 host, run:
