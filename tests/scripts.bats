@@ -5,6 +5,48 @@ setup() {
   REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
 }
 
+@test "repo bashrc keeps nvm-managed codex ahead of ~/.local/bin codex" {
+  export TEST_HOME="${BATS_TEST_TMPDIR}/home"
+  mkdir -p "${TEST_HOME}/.bashrc.d" "${TEST_HOME}/.local/bin" "${TEST_HOME}/.nvm/versions/node/v24.18.0/bin"
+  cp "${REPO_ROOT}/dotfiles/.bashrc" "${TEST_HOME}/.bashrc"
+  cp "${REPO_ROOT}/dotfiles/.bash_profile" "${TEST_HOME}/.bash_profile"
+
+  cat > "${TEST_HOME}/.local/bin/codex" <<'EOF'
+#!/usr/bin/env bash
+echo local-codex
+EOF
+  chmod +x "${TEST_HOME}/.local/bin/codex"
+
+  cat > "${TEST_HOME}/.nvm/versions/node/v24.18.0/bin/codex" <<'EOF'
+#!/usr/bin/env bash
+echo nvm-codex
+EOF
+  chmod +x "${TEST_HOME}/.nvm/versions/node/v24.18.0/bin/codex"
+
+  cat > "${TEST_HOME}/.nvm/versions/node/v24.18.0/bin/node" <<'EOF'
+#!/usr/bin/env bash
+echo v24.18.0
+EOF
+  chmod +x "${TEST_HOME}/.nvm/versions/node/v24.18.0/bin/node"
+
+  cat > "${TEST_HOME}/.nvm/nvm.sh" <<'EOF'
+export PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH"
+nvm() {
+  if [ "$1" = "use" ]; then
+    export PATH="$HOME/.nvm/versions/node/v24.18.0/bin:$PATH"
+  fi
+  return 0
+}
+EOF
+
+  run env HOME="${TEST_HOME}" bash -lc 'command -v codex; codex; command -v node; node'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"${TEST_HOME}/.nvm/versions/node/v24.18.0/bin/codex"* ]]
+  [[ "$output" == *"nvm-codex"* ]]
+  [[ "$output" == *"${TEST_HOME}/.nvm/versions/node/v24.18.0/bin/node"* ]]
+  [[ "$output" == *"v24.18.0"* ]]
+}
+
 @test "bootstrap help works" {
   run "${REPO_ROOT}/bootstrap.sh" --help
   [ "$status" -eq 0 ]

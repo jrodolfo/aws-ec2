@@ -32,17 +32,6 @@ export PATH
 # Uncomment the following line if you don't like systemctl's auto-paging feature:
 # export SYSTEMD_PAGER=
 
-# User specific aliases and functions
-if [ -d ~/.bashrc.d ]; then
-	for rc in ~/.bashrc.d/*; do
-		if [ -f "$rc" ]; then
-			. "$rc"
-		fi
-	done
-fi
-
-unset rc
-
 # Alias
 alias ll='ls -lh'
 alias la='ls -lha'
@@ -55,6 +44,17 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 # scripts from the tools folder
 export PATH="$HOME/.local/bin:$PATH"
+
+# User-specific shell snippets
+if [ -d ~/.bashrc.d ]; then
+    for rc in ~/.bashrc.d/*; do
+        if [ -f "$rc" ]; then
+            . "$rc"
+        fi
+    done
+fi
+
+unset rc
 
 # fzf shell integration (Linux paths)
 if [ -f /usr/share/fzf/shell/completion.bash ]; then
