@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # -------------------------------
 # Complete Linux system summary
@@ -27,7 +27,7 @@ VCPU=$(nproc)
 RAM=$(free -h | awk '/Mem:/ {print $2}')
 
 # Root disk
-DISK=$(df -h / | awk 'NR==2 {print $2}')
+DISK=$(df -h / | awk 'NR==2 {printf "%s (%s used, %s available)", $2, $3, $4}')
 
 # Hostname
 HOST=$(hostname)

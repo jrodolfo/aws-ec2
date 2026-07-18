@@ -57,6 +57,14 @@ EOF
   [[ "$output" == *"vi|vi|vi"* ]]
 }
 
+@test "linuxinfo prints root disk total used and available" {
+  run "${REPO_ROOT}/ops/linuxinfo"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Root Disk     : "* ]]
+  [[ "$output" == *" used, "* ]]
+  [[ "$output" == *" available)"* ]]
+}
+
 @test "bootstrap help works" {
   run "${REPO_ROOT}/bootstrap.sh" --help
   [ "$status" -eq 0 ]
