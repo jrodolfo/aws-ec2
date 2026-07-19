@@ -79,7 +79,7 @@ If the repository is private, configure GitHub authentication before `git clone`
   Installs Ollama and configures the service so Docker containers on the same host can reach it.
   Useful flags: `--dry-run`, `--version 0.11.6`, `--model <name>`, `--no-start`
 
-### Verification And Ops
+### Verification and Ops
 
 - `check-toolchain`
   Shows the current core toolchain and optional extras with versions.
