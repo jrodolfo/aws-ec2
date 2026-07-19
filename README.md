@@ -13,7 +13,7 @@ Opinionated bootstrap for turning a fresh Amazon Linux 2023 EC2 instance into my
 
 ## Quick Start
 
-Start with a root volume sized for development work, not the tiny default. For Docker and local AI tooling, use roughly 30 to 40 GB.
+Start with a root volume sized for development work, not the tiny default. A 30 GiB gp3 root volume is recommended for the base development workstation. Use more space when keeping several Docker images, larger Ollama models, or additional project data.
 
 ```bash
 sudo dnf update -y

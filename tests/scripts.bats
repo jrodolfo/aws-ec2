@@ -79,6 +79,14 @@ EOF
   [[ "$output" == *" available)"* ]]
 }
 
+@test "ec2info prints root disk total used and available" {
+  run "${REPO_ROOT}/ops/ec2info"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Root Disk     : "* ]]
+  [[ "$output" == *" used, "* ]]
+  [[ "$output" == *" available)"* ]]
+}
+
 @test "check-updates help works" {
   run "${REPO_ROOT}/ops/check-updates" --help
   [ "$status" -eq 0 ]
