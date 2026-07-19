@@ -40,17 +40,24 @@ Optional after the base setup:
 check-toolchain
 ```
 
-After the installation completes, follow [`docs/smoke-test.md`](docs/smoke-test.md) to validate the workstation on a fresh host.
-
 Notes:
-- `install-toolchain.sh` installs Docker, Docker Compose, Git, GitHub CLI, Bubblewrap, Java 21, Maven 3.9+, Python 3.11, `yt-dlp`, Node 24 via `nvm`, and Codex under the target user.
-- `install-dev-utils.sh` installs the minimal extra tools used by this setup: `ripgrep` and `pipx`.
-- `bootstrap.sh` installs dotfiles and helper scripts into the current user account.
-- `install-toolchain.sh` adds the current user to the `docker` group. The current shell may not see that change yet, so `docker` can still fail without `sudo` until you log out and back in.
+- `install-toolchain.sh` installs Docker, Docker Compose, Git, GitHub CLI, Bubblewrap, Java 21, Maven 3.9+, Python 3.11, `yt-dlp`, Node 24 via `nvm`, and Codex as part of this workstation's default toolchain. It uses `sudo` where needed for system packages and services.
+- `install-dev-utils.sh` installs the small but required day-to-day tools used by this workstation: `ripgrep` and `pipx`.
+- `bootstrap.sh` installs dotfiles and helper scripts into the current user account. `check-toolchain` and the other `ops/` helpers become available after `bootstrap.sh` and a new shell session, or after `source ~/.bashrc`.
 - `--java-mode adoptium25` installs Java 25 side-by-side under `/opt/java` without overriding the default Java 21 toolchain.
 - `check-toolchain` is the fastest way to confirm the machine is ready.
 
 If the repository is private, configure GitHub authentication before `git clone`.
+
+## Verification
+
+After the installation completes:
+
+```bash
+check-toolchain
+```
+
+Then follow [`docs/smoke-test.md`](docs/smoke-test.md) to validate the workstation on a fresh host.
 
 ## Script Reference
 
@@ -61,7 +68,7 @@ If the repository is private, configure GitHub authentication before `git clone`
   Useful flags: `--dry-run`, `--no-update`, `--user ec2-user`, `--java-mode adoptium25`
 
 - `./install/install-dev-utils.sh`
-  Installs minimal day-to-day utilities used by this setup.
+  Installs the small but required day-to-day tools used by this workstation.
   Useful flags: `--dry-run`, `--no-update`
 
 - `./bootstrap.sh`
@@ -135,7 +142,7 @@ If you want to adapt this repository for your own setup:
 
 `bootstrap.sh` installs whatever is currently in `dotfiles/` and `ops/`.
 
-## Restore From An Existing Host
+## Optional Migration From An Existing Host
 
 Use your PEM key and the correct SSH username for the AMI:
 
