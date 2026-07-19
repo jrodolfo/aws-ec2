@@ -24,7 +24,7 @@ echo
 echo "==============================="
 echo "Largest Home Directories"
 echo "==============================="
-du -sh "${HOME}"/* "${HOME}"/.[!.]* "${HOME}"/..?* 2>/dev/null | sort -h | tail -n 10 || true
+du -sh "${HOME}"/* "${HOME}"/.[!.]* "${HOME}"/..?* 2>/dev/null | sort -hr | head -n 10 || true
 echo
 
 if command -v docker >/dev/null 2>&1; then
