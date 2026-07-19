@@ -28,11 +28,15 @@ check-toolchain
 
 Optional after the base setup:
 
+Optional tools are kept separate so the base workstation remains small and quick to provision.
+
 ```bash
 ./install/install-extras.sh
 ./install/install-ollama.sh
 check-toolchain
 ```
+
+After the installation completes, follow [`docs/smoke-test.md`](docs/smoke-test.md) to validate the workstation on a fresh host.
 
 Notes:
 - `install-toolchain.sh` installs Docker, Docker Compose, Git, GitHub CLI, Bubblewrap, Java 21, Maven 3.9+, Python 3.11, `yt-dlp`, Node 24 via `nvm`, and Codex under the target user.
