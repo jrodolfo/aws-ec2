@@ -11,6 +11,8 @@
 
 Opinionated bootstrap for turning a fresh Amazon Linux 2023 EC2 instance into my preferred development workstation. This repository optimizes for reproducibility and simplicity, not broad compatibility with arbitrary Linux distributions or historical machine state.
 
+This repository is maintained primarily for my own EC2 development workflow, but it may also serve as a reference for engineers building a reproducible Amazon Linux 2023 workstation.
+
 ## Quick Start
 
 Start with a root volume sized for development work, not the tiny default. A 30 GiB gp3 root volume is recommended for the base development workstation. Use more space when keeping several Docker images, larger Ollama models, or additional project data.
@@ -25,6 +27,8 @@ cd aws-ec2
 ./bootstrap.sh
 check-toolchain
 ```
+
+If Docker commands still fail without `sudo` after installation, log out and back in so the new `docker` group membership takes effect, then run `check-toolchain` again.
 
 Optional after the base setup:
 
