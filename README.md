@@ -28,11 +28,11 @@ cd aws-ec2
 check-toolchain
 ```
 
-If Docker commands still fail without `sudo` after installation, log out and back in so the new `docker` group membership takes effect, then run `check-toolchain` again.
+Optional tools are kept separate so the base workstation remains small and quick to provision.
+
+If Docker commands require `sudo` after installation, log out and back in so the new `docker` group membership takes effect, then run `check-toolchain` again.
 
 Optional after the base setup:
-
-Optional tools are kept separate so the base workstation remains small and quick to provision.
 
 ```bash
 ./install/install-extras.sh
