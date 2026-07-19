@@ -79,6 +79,13 @@ EOF
   [[ "$output" == *" available)"* ]]
 }
 
+@test "check-updates help works" {
+  run "${REPO_ROOT}/ops/check-updates" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage: check-updates"* ]]
+  [[ "$output" == *"Amazon Linux"* ]]
+}
+
 @test "check-toolchain prints core and optional sections" {
   run "${REPO_ROOT}/ops/check-toolchain"
   [ "$status" -eq 0 ]

@@ -27,5 +27,27 @@ echo "==============================="
 echo "Release Update Check"
 echo "==============================="
 echo "Checking for available release updates..."
+output=""
+status=0
 
-dnf check-release-update
+set +e
+output="$(dnf check-release-update 2>&1)"
+status=$?
+set -e
+
+if [[ "${status}" -ne 0 ]]; then
+    echo
+    echo "Release update check failed:"
+    printf '%s\n' "${output}" >&2
+    exit "${status}"
+fi
+
+if [[ -n "${output}" ]]; then
+    echo
+    printf '%s\n' "${output}"
+    echo
+    echo "Release updates are available."
+else
+    echo
+    echo "No newer Amazon Linux release is currently available."
+fi
