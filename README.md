@@ -38,7 +38,7 @@ Notes:
 - `install-toolchain.sh` installs Docker, Docker Compose, Git, GitHub CLI, Bubblewrap, Java 21, Maven 3.9+, Python 3.11, `yt-dlp`, Node 24 via `nvm`, and Codex under the target user.
 - `install-dev-utils.sh` installs the minimal extra tools used by this setup: `ripgrep` and `pipx`.
 - `bootstrap.sh` installs dotfiles and helper scripts into the current user account.
-- After Docker group changes, log out and back in.
+- `install-toolchain.sh` adds the current user to the `docker` group. The current shell may not see that change yet, so `docker` can still fail without `sudo` until you log out and back in.
 - `--java-mode adoptium25` installs Java 25 side-by-side under `/opt/java` without overriding the default Java 21 toolchain.
 - `check-toolchain` is the fastest way to confirm the machine is ready.
 
